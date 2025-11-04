@@ -1,0 +1,22 @@
+{
+  "name": "sir-media-upload",
+  "version": "0.1.0",
+  "description": "Smart Incident Reporting media upload service",
+  "main": "app/index.js",
+  "scripts": {
+    "test": "vitest",
+    "dev": "nodemon app/index.js"
+  },
+  "author": "",
+  "license": "OGL-UK-3.0",
+  "dependencies": {
+    "@hapi/hapi": "21.4.3",
+    "@hapi/yar": "11.0.3"
+  },
+  "devDependencies": {
+    "neostandard": "0.12.2",
+    "nodemon": "3.1.10",
+    "vitest": "3.2.4"
+  },
+  "type": "module"
+}
