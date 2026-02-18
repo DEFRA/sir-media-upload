@@ -4,10 +4,12 @@ const urls = {
 
 const HOME = 'home'
 const PUBLIC = 'public'
+const UPLOAD_PHOTO = 'upload-photo'
 
 const views = {
   HOME,
-  PUBLIC
+  PUBLIC,
+  UPLOAD_PHOTO
 }
 
 const routes = {
