@@ -5,20 +5,22 @@
   "main": "app/index.js",
   "scripts": {
     "test": "vitest",
-    "dev": "nodemon app/index.js"
+    "dev": "nodemon index.js"
   },
   "author": "",
   "license": "OGL-UK-3.0",
   "dependencies": {
+    "@hapi/catbox-redis": "^7.0.2",
     "@hapi/hapi": "21.4.3",
-    "@hapi/yar": "11.0.3"
+    "@hapi/yar": "11.0.3",
+    "joi": "^18.0.2"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "3.2.4",
+    "eslint": "9.37.0",
     "neostandard": "0.12.2",
     "nodemon": "3.1.10",
-    "vitest": "3.2.4",
-    "@vitest/coverage-v8": "3.2.4",
-    "eslint": "9.37.0"
+    "vitest": "3.2.4"
   },
   "type": "module"
 }
