@@ -1,0 +1,91 @@
+{% extends "dist/govuk/template.njk" %}
+{% from "dist/govuk/components/phase-banner/macro.njk" import govukPhaseBanner %}
+{% from "dist/govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "dist/govuk/components/button/macro.njk" import govukButton %}
+{% from "dist/govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "dist/govuk/components/textarea/macro.njk" import govukTextarea %}
+{% from "dist/govuk/components/inset-text/macro.njk" import  govukInsetText %}
+{% from "dist/govuk/components/panel/macro.njk" import govukPanel %}
+{% from "dist/govuk/components/radios/macro.njk" import govukRadios %}
+{% from "dist/govuk/components/input/macro.njk" import govukInput %}
+{% from "dist/govuk/components/date-input/macro.njk" import govukDateInput %}
+{% from "dist/govuk/components/checkboxes/macro.njk" import govukCheckboxes %}
+{% from "dist/govuk/components/notification-banner/macro.njk" import govukNotificationBanner %}
+{% from "dist/govuk/components/fieldset/macro.njk" import govukFieldset %}
+{% from "dist/govuk/components/summary-list/macro.njk" import govukSummaryList %}
+{% from "dist/govuk/components/warning-text/macro.njk" import govukWarningText %}
+{% from "dist/govuk/components/service-navigation/macro.njk" import govukServiceNavigation %}
+
+{% block head %}
+  <!-- Version: {{ appVersion }} -->
+  <!-- Environment: {{ env }} -->
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="description" content="{% if metaDescription %}{{ metaDescription }}{% else %}Report pollution, including sewage, in rivers, lakes, canals, the sea and other watercourses in England.{% endif %}">
+
+  <link href="{{ assetPath }}/stylesheets/application.css" rel="stylesheet" />
+
+{% endblock %}
+
+{% block bodyStart %}
+  {% include "cookie-banner.html" %}
+{% endblock %}
+
+{% block header %}
+  {{ govukHeader({
+    homepageUrl: govUkHome,
+    classes: "govuk-header--full-width-border"    
+  }) }}
+  
+  {{ govukServiceNavigation({
+    serviceName: serviceName,
+    serviceUrl: serviceUrl
+  }) }}
+{% endblock %}
+
+{% block pageTitle %}
+  {% if errorSummary %} Error: {% endif %} {{ pageTitle }} - {{ pageTitleServiceName }} - GOV.UK
+{% endblock %}
+
+{% block beforeContent %}
+  {{ govukPhaseBanner({
+    tag: {
+      text: "Beta"
+    },
+    html: 'This is a new service – <a class="govuk-link" href="/feedback">leave feedback</a> to help us to improve it.'
+  }) }}
+
+  <!-- Hide the back link if Javascript is not available -->
+  <noscript>
+    <style>#back-link {display: none} </style>
+  </noscript>
+
+  {% if (not hideBackLink) %}
+    {{ govukBackLink({
+        text: "Back",
+        href: "#",
+        attributes: {
+            id: "back-link",
+            onclick: "window.history.go(-1); return false;"
+        }
+    }) }}
+  {% endif %}
+
+{% endblock %}
+
+{% block content %}
+  <h1 id="pageTitle" class="govuk-heading-xl">Default page template</h1>
+{% endblock %}
+
+{% block footer %}
+  {% include "footer.html" %}
+{% endblock %}
+
+{% block bodyEnd %}
+  {# Run JavaScript at end of the <body>, to avoid blocking the initial render. #}
+  <script type="module" src="{{ assetPath }}/govuk-frontend.min.js"></script>
+  <script type="module">
+    import { initAll } from '{{assetPath}}/govuk-frontend.min.js'
+    initAll()
+  </script>
+  <script src="{{ assetPath }}/js/core.js"></script>
+{% endblock %}
