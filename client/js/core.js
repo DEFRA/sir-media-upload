@@ -1,5 +1,5 @@
 'use strict'
-// import analytics from './analytics.js'
+import analytics from './analytics.js'
 // "sir" represents the global namespace for client side js across the service
 window.sir = {
   utils: {
@@ -81,5 +81,4 @@ Array.prototype.forEach.call(jsElements, function (element) {
 })
 
 // Initialise analytics tracking and associated cookies
-// analytics()
-window.sir.utils.setupGoogleTagManager()
+analytics()

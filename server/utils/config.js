@@ -1,6 +1,6 @@
 import Joi from 'joi'
 const envs = ['development', 'test', 'production']
-const defaultPort = 8000
+const defaultPort = 3000
 const defaultRedisPort = 6379
 
 const getBoolean = booleanString =>
@@ -24,8 +24,6 @@ const schema = Joi.object().keys({
   // serviceBusConnectionString: Joi.string().required(),
   // serviceBusQueueName: Joi.string().required()
 })
-
-const captchaEnabled = getBoolean(process.env.CAPTCHA_ENABLED)
 
 // Build config
 const config = {

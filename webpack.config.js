@@ -1,7 +1,6 @@
 import { fileURLToPath } from 'url'
 import path from 'path'
 import webpack from 'webpack'
-import CopyPlugin from 'copy-webpack-plugin'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -10,11 +9,8 @@ const inDev = env === 'development'
 
 export default {
   entry: {
-    checkYourAnswers: './client/js/pages/check-your-answers.js',
     core: './client/js/core.js',
-    cookies: './client/js/pages/cookies.js',
-    locationMap: './client/js/pages/location-map.js',
-    locationMapGps: './client/js/pages/location-map-gps.js'
+    cookies: './client/js/pages/cookies.js'
   },
   output: {
     path: path.resolve(__dirname, 'server/public/build/js'),
@@ -39,12 +35,6 @@ export default {
   plugins: [
     new webpack.EnvironmentPlugin({
       GA_ID: '' // use '' unless process.env.GA_ID is defined
-    }),
-    new CopyPlugin({
-      patterns: [
-        { from: 'node_modules/@friendlycaptcha/sdk/site.min.js' },
-        { from: 'node_modules/@friendlycaptcha/sdk/site.compat.min.js' }
-      ]
     })
   ]
 }
