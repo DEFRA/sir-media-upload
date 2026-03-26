@@ -19,7 +19,7 @@ const views = {
   YOUR_PHOTOS,
   SEND_PHOTOS,
   SUCCESS,
-  TERMS_FOR_UPLOADING_PHOTOS,
+  TERMS_FOR_UPLOADING_PHOTOS
 }
 
 const routes = {
