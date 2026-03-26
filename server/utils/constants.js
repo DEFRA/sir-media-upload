@@ -5,11 +5,21 @@ const urls = {
 const HOME = 'home'
 const PUBLIC = 'public'
 const UPLOAD_PHOTO = 'upload-photo'
+const ADD_A_PHOTO = 'add-a-photo'
+const YOUR_PHOTOS = 'your-photos'
+const SEND_PHOTOS = 'send-photos'
+const SUCCESS = 'success'
+const TERMS_FOR_UPLOADING_PHOTOS = 'terms-for-uploading-photos'
 
 const views = {
   HOME,
   PUBLIC,
-  UPLOAD_PHOTO
+  UPLOAD_PHOTO,
+  ADD_A_PHOTO,
+  YOUR_PHOTOS,
+  SEND_PHOTOS,
+  SUCCESS,
+  TERMS_FOR_UPLOADING_PHOTOS,
 }
 
 const routes = {
