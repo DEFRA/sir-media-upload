@@ -19,7 +19,7 @@ const views = {
   YOUR_PHOTOS,
   SEND_PHOTOS,
   SUCCESS,
-  TERMS_FOR_UPLOADING_PHOTOS,
+  TERMS_FOR_UPLOADING_PHOTOS
 }
 
 const routes = {
@@ -30,10 +30,23 @@ for (const [key, value] of Object.entries(views)) {
   routes[key] = `/${value}`
 }
 
+const statusCodes = {
+  OK: 200,
+  CREATED: 201,
+  NO_CONTENT: 204,
+  REDIRECT: 302,
+  UNAUTHORIZED: 401,
+  PAGE_NOT_FOUND: 404,
+  REQUEST_TIMEOUT: 408,
+  PAYLOAD_TOO_LARGE: 413,
+  PROBLEM_WITH_SERVICE: 500,
+  SERVICE_UNAVAILABLE: 503
+}
+
 export default Object.freeze({
   routes,
   views,
-  // statusCodes,
+  statusCodes,
   urls
   // serviceNames,
   // redisKeys,

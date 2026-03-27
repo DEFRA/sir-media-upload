@@ -35,23 +35,6 @@ describe('blob-storage', () => {
     jest.clearAllMocks()
   })
 
-  it('returns null when blob env vars are missing', async () => {
-    const blobUrl = process.env.AZURE_BLOB_SERVICE_URL
-    const sorageAccount = process.env.AZURE_STORAGE_ACCOUNT
-    const accessKey = process.env.AZURE_STORAGE_ACCESS_KEY
-
-    delete process.env.AZURE_BLOB_SERVICE_URL
-    delete process.env.AZURE_STORAGE_ACCOUNT
-    delete process.env.AZURE_STORAGE_ACCESS_KEY
-
-    const result = await getUploadContainerClient()
-    expect(result).toBeNull()
-
-    process.env.AZURE_BLOB_SERVICE_URL = blobUrl
-    process.env.AZURE_STORAGE_ACCOUNT = sorageAccount
-    process.env.AZURE_STORAGE_ACCESS_KEY = accessKey
-  })
-
   it('returns container client on first call', async () => {
     const { firstResult, containerClient } = await setupConfiguredClient()
     expect(firstResult).toBe(containerClient)

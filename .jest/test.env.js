@@ -1,2 +1,5 @@
 process.env.SERVICE_BUS_CONNECTION_STRING = 'testConnectionString'
 process.env.SERVICE_BUS_QUEUE_NAME = 'testQueueName'
+process.env.AZURE_BLOB_SERVICE_URL = 'testBlobServiceUrl'
+process.env.AZURE_STORAGE_ACCOUNT = 'testStorageAccount'
+process.env.AZURE_STORAGE_ACCESS_KEY = 'testStorageAccessKey'

@@ -20,9 +20,12 @@ const schema = Joi.object().keys({
   logLevel: Joi.string().default('info'),
   sessionCookiePassword: Joi.string().default('the-password-must-be-at-least-32-characters-long'),
   authCookiePassword: Joi.string().default('the-password-must-be-at-least-32-characters-long'),
-  cookieIsSecure: Joi.bool().default(false)
-  // serviceBusConnectionString: Joi.string().required(),
-  // serviceBusQueueName: Joi.string().required()
+  cookieIsSecure: Joi.bool().default(false),
+  serviceBusConnectionString: Joi.string().required(),
+  serviceBusQueueName: Joi.string().required(),
+  blobServiceUrl: Joi.string().required(),
+  storageAccount: Joi.string().required(),
+  storageAccessKey: Joi.string().required()
 })
 
 // Build config
@@ -36,9 +39,12 @@ const config = {
   redisTls: getBoolean(process.env.REDIS_TLS),
   sessionCookiePassword: process.env.SESSION_COOKIE_PASSWORD,
   authCookiePassword: process.env.SESSION_COOKIE_PASSWORD,
-  cookieIsSecure: getBoolean(process.env.COOKIE_IS_SECURE)
-  // serviceBusConnectionString: process.env.SERVICE_BUS_CONNECTION_STRING,
-  // serviceBusQueueName: process.env.SERVICE_BUS_QUEUE_NAME
+  cookieIsSecure: getBoolean(process.env.COOKIE_IS_SECURE),
+  serviceBusConnectionString: process.env.SERVICE_BUS_CONNECTION_STRING,
+  serviceBusQueueName: process.env.SERVICE_BUS_QUEUE_NAME,
+  blobServiceUrl: process.env.AZURE_BLOB_SERVICE_URL,
+  storageAccount: process.env.AZURE_STORAGE_ACCOUNT,
+  storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY
 }
 
 // Validate config
