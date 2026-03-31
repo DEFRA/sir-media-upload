@@ -8,7 +8,7 @@ ENV PORT=8000
 WORKDIR /usr/src
 COPY . sir-media-upload
 WORKDIR /usr/src/sir-media-upload
-RUN npm ci
+RUN npm ci --ignore-scripts
 RUN npm run build
 
 EXPOSE $PORT
