@@ -11,7 +11,7 @@ services:
       args:
         - GA_ID
     ports:
-      - "3000:3000"
+      - "8000:8000"
     secrets:
       - WEBAPP_ENV
     entrypoint: [ '/bin/sh', '-c', "source /run/secrets/WEBAPP_ENV && npm run start" ]
