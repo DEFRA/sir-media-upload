@@ -10,6 +10,7 @@ const YOUR_PHOTOS = 'your-photos'
 const SEND_PHOTOS = 'send-photos'
 const SUCCESS = 'success'
 const TERMS_FOR_UPLOADING_PHOTOS = 'terms-for-uploading-photos'
+const LINK_USED = 'link-used'
 
 const views = {
   HOME,
@@ -19,7 +20,8 @@ const views = {
   YOUR_PHOTOS,
   SEND_PHOTOS,
   SUCCESS,
-  TERMS_FOR_UPLOADING_PHOTOS
+  TERMS_FOR_UPLOADING_PHOTOS,
+  LINK_USED
 }
 
 const routes = {
