@@ -10,6 +10,14 @@ describe(url, () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('Upload photos')
     })
+
+    it('Should pass journey and dateTime query parameters to the view', async () => {
+      const journey = 'test-journey'
+      const dateTime = '2026-04-01'
+      const urlWithQuery = `${url}?journey=${journey}&dateTime=${dateTime}`
+      const response = await submitGetRequest({ url: urlWithQuery }, header, constants.statusCodes.OK)
+      expect(response.statusCode).toBe(constants.statusCodes.OK)
+    })
   })
   describe('POST', () => {
     it(`Should return redirect response for ${url}`, async () => {
