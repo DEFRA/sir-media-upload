@@ -2,7 +2,8 @@ import constants from '../utils/constants.js'
 
 const handlers = {
   get: (_request, h) => {
-    return h.view(constants.views.SUCCESS)
+    const feedback = process.env.SMART_INCIDENT_REPORTING_BASE_URL + '/feedback'
+    return h.view(constants.views.SUCCESS, { feedback })
   }
 }
 

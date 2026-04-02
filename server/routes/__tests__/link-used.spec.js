@@ -1,5 +1,6 @@
 import { submitGetRequest } from '../../__test-helpers__/server.js'
 import constants from '../../utils/constants.js'
+import linkUsedRoute from '../link-used.js'
 
 const url = constants.routes.LINK_USED
 const header = 'This link has been used'
@@ -20,9 +21,16 @@ describe(url, () => {
       expect(response.payload).toContain('We have received your photos')
     })
 
-    it(`Should display feedback link for ${url}`, async () => {
-      const response = await submitGetRequest({ url }, header)
-      expect(response.payload).toContain('<a href="/feedback">Give feedback</a>')
+    it(`Should pass feedback link to view for ${url}`, () => {
+      const baseUrl = 'https://sir.example.gov.uk'
+      process.env.SMART_INCIDENT_REPORTING_BASE_URL = baseUrl
+
+      const view = jest.fn()
+      linkUsedRoute[0].handler({}, { view })
+
+      expect(view).toHaveBeenCalledWith(constants.views.LINK_USED, {
+        feedback: `${baseUrl}/feedback`
+      })
     })
   })
 })
