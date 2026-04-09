@@ -1,11 +1,11 @@
 import constants from '../utils/constants.js'
+import { returnFormattedDate } from '../utils/date-helpers.js'
 
 const handlers = {
-  get: async (request, h) => {
-    const journey = request.query.journey
-    const dateTime = request.query.dateTime
-    return h.view(constants.views.UPLOAD_PHOTO, { journey, dateTime })
-  },
+  get: async (_request, h) => h.view(constants.views.UPLOAD_PHOTO, {
+    journey: 'water pollution',
+    dateTime: returnFormattedDate()
+  }),
   post: async (_request, h) => h.redirect(constants.routes.ADD_A_PHOTO)
 }
 
