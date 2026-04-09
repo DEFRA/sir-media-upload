@@ -261,7 +261,8 @@ describe(url, () => {
       const form = createForm('valid.png', mockValidPng, 'image/png')
       const thumbnails = Array.from({ length: 5 }, (_, index) => ({
         finalFilename: `upload-id/${index}.png`,
-        thumbLoc: `/public/thumbnails/upload-id-${index}.png`
+        thumbLoc: `/public/thumbnails/upload-id-${index}.png`,
+        fileSizeBytes: 1024
       }))
       const response = await submitPostRequest({
         url,
@@ -495,6 +496,17 @@ describe(url, () => {
         }, 302)
         const thumbnails = response.request.yar.get('thumbnails')
         expect(thumbnails[0]).toHaveProperty('finalFilename')
+      })
+
+      it('should store fileSizeBytes in session thumbnail entry', async () => {
+        const form = createForm('valid.png', mockValidPng, 'image/png')
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+        const thumbnails = response.request.yar.get('thumbnails')
+        expect(thumbnails[0]).toHaveProperty('fileSizeBytes')
       })
 
       it('should store upload fallback name in finalFilename when basename is empty', async () => {

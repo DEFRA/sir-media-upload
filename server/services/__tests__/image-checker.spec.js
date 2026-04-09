@@ -208,6 +208,44 @@ describe('image-checker', () => {
     expect(result.skipped).toBe(false)
   })
 
+  it('returns response entries with severityScores when validation succeeds', async () => {
+    const { result } = await setupSuccessfulValidation()
+
+    expect(result.response).toEqual([
+      {
+        status: 'ok',
+        severityScores: 'none'
+      },
+      {
+        status: 'ok',
+        severityScores: 'none'
+      }
+    ])
+  })
+
+  it('returns original content safety body fields alongside severityScores', async () => {
+    const mockPost = jest.fn().mockResolvedValue({
+      body: {
+        categoriesAnalysis: [{ category: 'Violence', severity: 2 }],
+        modelVersion: 'latest'
+      }
+    })
+    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
+    const downloadToBuffer = jest.fn().mockResolvedValue(Buffer.from('image-data'))
+    const getBlobClient = jest.fn().mockReturnValue({ downloadToBuffer })
+
+    ContentSafetyClient.mockReturnValue({ path: mockPath })
+    isUnexpected.mockReturnValue(false)
+    blobStorage.getUploadContainerClient.mockResolvedValue({ getBlobClient })
+
+    const result = await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
+
+    expect(result.response[0]).toEqual(expect.objectContaining({
+      modelVersion: 'latest',
+      severityScores: 'Violence:2'
+    }))
+  })
+
   it('requests blob client for each thumbnail', async () => {
     const { getBlobClient } = await setupSuccessfulValidation()
     expect(getBlobClient).toHaveBeenCalledTimes(2)
