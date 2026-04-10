@@ -19,7 +19,7 @@ const generateThumbnails = (count) =>
   Array.from({ length: count }, (_, i) => ({
     finalFilename: `upload-id/photo${i + 1}.jpg`,
     thumbLoc: `/public/thumbnails/upload-id-photo${i + 1}-thumbnail.jpg`,
-    fileSizeBytes: 1024 * (i + 1)
+    fileSizeBytes: 1024 * 1024 * (i + 1)
   }))
 
 describe(url, () => {
@@ -99,9 +99,8 @@ describe(url, () => {
         imageName: 'photo1.jpg',
         severityScores: 'Hate:0, SelfHarm:0, Sexual:1, Violence:2',
         metadata: expect.objectContaining({
-          sizeBytes: 1024,
-          fileType: 'jpg',
-          location: 'upload-id/photo1.jpg'
+          size: '1.00',
+          fileType: 'jpg'
         })
       }))
 
@@ -110,9 +109,8 @@ describe(url, () => {
         imageName: 'photo2.jpg',
         severityScores: 'Hate:4, SelfHarm:0, Sexual:0, Violence:0',
         metadata: expect.objectContaining({
-          sizeBytes: 2048,
-          fileType: 'jpg',
-          location: 'upload-id/photo2.jpg'
+          size: '2.00',
+          fileType: 'jpg'
         })
       }))
     })

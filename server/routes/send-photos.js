@@ -3,18 +3,7 @@ import imageChecker from '../services/image-checker.js'
 import { getUploadContainerClient } from '../services/blob-storage.js'
 import { sendMessage } from '../services/service-bus.js'
 
-const buildMetadata = (thumbnail) => {
-  const imageName = thumbnail.finalFilename.split('/').pop()
-  const extension = imageName.includes('.') ? imageName.split('.').pop().toLowerCase() : ''
-
-  return {
-    sizeBytes: thumbnail.fileSizeBytes ?? null,
-    fileType: extension,
-    location: thumbnail.finalFilename
-  }
-}
-
-const buildPayload = (request, thumbnails, validationResult, uploadContainerUrl) => {
+const buildPayload = (request, images, validationResult, uploadContainerUrl) => {
   const validationResponse = validationResult?.response || []
   const sessionId = request.yar.id
 
@@ -22,15 +11,18 @@ const buildPayload = (request, thumbnails, validationResult, uploadContainerUrl)
     mediaUpload: {
       sessionId,
       timestamp: new Date().toISOString(),
-      images: thumbnails.map((thumbnail, index) => {
+      images: images.map((image, index) => {
         const imageSafety = validationResponse[index] || {}
-        const imageName = thumbnail.finalFilename.split('/').pop()
+        const imageName = image.finalFilename.split('/').pop()
 
         return {
           imageLink: `${uploadContainerUrl}/${sessionId}/${imageName}`,
           imageName,
           severityScores: imageSafety.severityScores || 'none',
-          metadata: buildMetadata(thumbnail)
+          metadata: {
+            size: image.fileSizeBytes ? (image.fileSizeBytes / (1024 * 1024)).toFixed(2) : null,
+            fileType: imageName.includes('.') ? imageName.split('.').pop().toLowerCase() : ''
+          }
         }
       })
     }
@@ -39,16 +31,16 @@ const buildPayload = (request, thumbnails, validationResult, uploadContainerUrl)
 
 const handlers = {
   get: (request, h) => {
-    const thumbnails = request.yar.get('thumbnails') || []
+    const images = request.yar.get('thumbnails') || []
     return h.view(constants.views.SEND_PHOTOS, {
-      photos: thumbnails.length
+      photos: images.length
     })
   },
   post: async (request, h) => {
-    const thumbnails = request.yar.get('thumbnails') || []
+    const images = request.yar.get('thumbnails') || []
     const uploadContainerClient = await getUploadContainerClient()
-    const validationResult = await imageChecker.validate(thumbnails)
-    const payload = buildPayload(request, thumbnails, validationResult, uploadContainerClient.url)
+    const validationResult = await imageChecker.validate(images)
+    const payload = buildPayload(request, images, validationResult, uploadContainerClient.url)
     await sendMessage(request.logger, payload)
     return h.redirect(constants.routes.SUCCESS)
   }
