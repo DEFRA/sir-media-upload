@@ -3,7 +3,7 @@ import { returnFormattedDate } from '../utils/date-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
-    const cachedData = await request.server.app.mediaUploadCache.get(request.yar.id)
+    const cachedData = await request.server.app.mediaUploadCache.get(request.query.sirid)
     const journey = cachedData?.journey
     const dateTime = cachedData?.dateTime
 

@@ -3,7 +3,7 @@ import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/serv
 import constants from '../../utils/constants.js'
 import { returnFormattedDate } from '../../utils/date-helpers.js'
 
-const url = constants.routes.UPLOAD_PHOTO
+const url = `${constants.routes.UPLOAD_PHOTO}?sirid=test-session-id`
 const header = 'Upload photos'
 const journeyCases = [
   'water pollution',
@@ -45,13 +45,13 @@ describe(url, () => {
     })
   })
   describe('POST', () => {
-    it(`Should return redirect response for ${url}`, async () => {
-      const response = await submitPostRequest({ url }, constants.statusCodes.REDIRECT)
+    it(`Should return redirect response for ${constants.routes.UPLOAD_PHOTO}`, async () => {
+      const response = await submitPostRequest({ url: constants.routes.UPLOAD_PHOTO }, constants.statusCodes.REDIRECT)
       expect(response.statusCode).toBe(constants.statusCodes.REDIRECT)
     })
 
-    it(`Should redirect to ${constants.routes.ADD_A_PHOTO} for ${url}`, async () => {
-      const response = await submitPostRequest({ url }, constants.statusCodes.REDIRECT)
+    it(`Should redirect to ${constants.routes.ADD_A_PHOTO} for ${constants.routes.UPLOAD_PHOTO}`, async () => {
+      const response = await submitPostRequest({ url: constants.routes.UPLOAD_PHOTO }, constants.statusCodes.REDIRECT)
       expect(response.headers.location).toBe(constants.routes.ADD_A_PHOTO)
     })
   })
