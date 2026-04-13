@@ -1,6 +1,6 @@
 import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/server.js'
 import constants from '../../utils/constants.js'
-import { returnFormattedDate } from '../../utils/date-helper.js'
+import { returnFormattedDate } from '../../utils/date-helpers.js'
 
 const url = constants.routes.UPLOAD_PHOTO
 const header = 'Upload photos'

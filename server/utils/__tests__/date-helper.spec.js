@@ -1,4 +1,4 @@
-import { returnFormattedDate } from '../date-helper.js'
+import { returnFormattedDate } from '../date-helpers.js'
 
 describe('returnFormattedDate', () => {
   afterEach(() => {

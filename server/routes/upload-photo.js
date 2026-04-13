@@ -1,5 +1,5 @@
 import constants from '../utils/constants.js'
-import { returnFormattedDate } from '../utils/date-helper.js'
+import { returnFormattedDate } from '../utils/date-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
