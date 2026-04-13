@@ -1,3 +1,4 @@
+import { getServer } from '../../../.jest/setup.js'
 import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/server.js'
 import constants from '../../utils/constants.js'
 import { returnFormattedDate } from '../../utils/date-helpers.js'
@@ -14,42 +15,31 @@ const journeyCases = [
 describe(url, () => {
   describe('GET', () => {
     it(`Should return success response and correct view for ${url}`, async () => {
+      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue(null)
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('Upload photos')
     })
 
-    it('should return OK when journey and dateTime are in session', async () => {
+    it('should return OK when journey and dateTime are in cache', async () => {
       const dateTime = new Date(2026, 3, 1, 12, 30)
-      const response = await submitGetRequest(
-        { url },
-        header,
-        constants.statusCodes.OK,
-        { journey: 'smell', dateTime }
-      )
+      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue({ journey: 'smell', dateTime })
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
 
       expect(response.statusCode).toBe(constants.statusCodes.OK)
     })
 
-    it.each(journeyCases)('should render journey type from session: %s', async (journey) => {
+    it.each(journeyCases)('should render journey type from cache: %s', async (journey) => {
       const dateTime = new Date(2026, 3, 1, 12, 30)
-      const response = await submitGetRequest(
-        { url },
-        header,
-        constants.statusCodes.OK,
-        { journey, dateTime }
-      )
+      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue({ journey, dateTime })
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
 
       expect(response.payload).toContain(journey)
     })
 
-    it('should render dateTime from session', async () => {
+    it('should render dateTime from cache', async () => {
       const dateTime = new Date(2026, 3, 1, 12, 30)
-      const response = await submitGetRequest(
-        { url },
-        header,
-        constants.statusCodes.OK,
-        { journey: 'smell', dateTime }
-      )
+      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue({ journey: 'smell', dateTime })
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
 
       expect(response.payload).toContain(returnFormattedDate(dateTime))
     })

@@ -3,8 +3,9 @@ import { returnFormattedDate } from '../utils/date-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
-    const journey = request.yar.get('journey')
-    const dateTime = request.yar.get('dateTime')
+    const cachedData = await request.server.app.mediaUploadCache.get(request.yar.id)
+    const journey = cachedData?.journey
+    const dateTime = cachedData?.dateTime
 
     return h.view(constants.views.UPLOAD_PHOTO, {
       journey,
