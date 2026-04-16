@@ -12,7 +12,7 @@ const MAX_SELECTED_FILES = 5
 const MIN_RESIZE_WIDTH = 320
 const QUALITY_LEVELS = [80, 70, 60, 50, 40, 30]
 const RESIZE_WIDTH_RATIO = 0.8
-const PAYLOAD_MAX_BYTES = 10 * 1024 * 1024
+const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024 // 25MB
 const UPLOAD_MAX_BYTES = 4 * 1024 * 1024 // 4MB
 
 export function streamToBuffer (stream) {
@@ -277,8 +277,21 @@ export default [
         parse: true,
         multipart: true,
         allow: 'multipart/form-data',
-        maxBytes: PAYLOAD_MAX_BYTES
+        maxBytes: PAYLOAD_MAX_BYTES,
+        failAction: (request, h, err) => {
+          if (err?.output?.statusCode === 413) {
+            return maximumFileSizeExceeded(h).takeover()
+          }
+          throw err
+        }
       }
     }
   }
 ]
+
+const maximumFileSizeExceeded = (h) => {
+  return h.view(constants.views.ADD_A_PHOTO, {
+    maxSelectedFiles: false,
+    errorMessage: 'The selected file must be smaller than 25MB'
+  })
+}
