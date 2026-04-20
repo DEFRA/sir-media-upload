@@ -62,3 +62,20 @@
 
 {% endblock %}
 
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var fileInput = document.getElementById('file-upload-1')
+    if (!fileInput) return
+    var savedFiles = null
+    fileInput.addEventListener('change', function () {
+      if (this.files.length > 0) savedFiles = this.files
+    })
+    fileInput.addEventListener('cancel', function () {
+      if (!savedFiles) return
+      var dt = new DataTransfer()
+      for (var i = 0; i < savedFiles.length; i++) dt.items.add(savedFiles[i])
+      this.files = dt.files
+      this.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+  })
+</script>

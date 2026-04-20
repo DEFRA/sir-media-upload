@@ -183,6 +183,13 @@ async function handleFileUpload (request, uploadId) {
   }
 
   const fileBuffer = await streamToBuffer(file)
+
+  if (!fileBuffer.length) {
+    const err = new Error('No file data provided')
+    err.code = 'NO_FILE'
+    throw err
+  }
+
   const { buffer: uploadBuffer, extension } = await convertImageType(fileBuffer, file)
   const { buffer: maxSizedBuffer, extension: maxSizedExtension } = await convertImageSize(uploadBuffer, extension)
 

@@ -46,10 +46,12 @@
             </p>
         {% endif %}
 
-        {{ govukButton({
-            text: "Continue",
-            href: "/send-photos"
-        }) }}
+        {% if remainingPhotos < 5 %}
+            {{ govukButton({
+                text: "Continue",
+                href: "/send-photos"
+            }) }}
+        {% endif %}
     </div>
 </div>
 
