@@ -65,8 +65,26 @@ describe(url, () => {
       expect(response.headers.location).toBe(constants.routes.SUCCESS)
     })
 
+    it('should use sirid from session as sessionId in payload', async () => {
+      const thumbnails = generateThumbnails(1)
+      const sirid = 'test-sir-session-123'
+
+      imageChecker.validate.mockResolvedValue({
+        success: true,
+        skipped: false,
+        response: [{ severityScores: 'Hate:0, SelfHarm:0, Sexual:0, Violence:0' }]
+      })
+
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { thumbnails, sirid })
+
+      expect(sendMessage).toHaveBeenCalledTimes(1)
+      const [, payload] = sendMessage.mock.calls[0]
+      expect(payload.mediaUpload.sessionId).toBe(sirid)
+    })
+
     it('should send a payload containing required fields for each image', async () => {
       const thumbnails = generateThumbnails(2)
+      const sirid = 'test-session-id-456'
 
       imageChecker.validate.mockResolvedValue({
         success: true,
@@ -81,21 +99,20 @@ describe(url, () => {
         ]
       })
 
-      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { thumbnails })
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { thumbnails, sirid })
 
       expect(sendMessage).toHaveBeenCalledTimes(1)
       const [, payload] = sendMessage.mock.calls[0]
       expect(payload.mediaUpload).toEqual(expect.objectContaining({
-        sessionId: expect.any(String),
+        sessionId: sirid,
         timestamp: expect.any(String),
         images: expect.any(Array)
       }))
 
       expect(payload.mediaUpload.images).toHaveLength(2)
-      const { sessionId } = payload.mediaUpload
 
       expect(payload.mediaUpload.images[0]).toEqual(expect.objectContaining({
-        imageLink: expect.stringContaining(`/sir-media-uploads/${sessionId}/photo1.jpg`),
+        imageLink: expect.stringContaining(`/sir-media-uploads/${sirid}/photo1.jpg`),
         imageName: 'photo1.jpg',
         severityScores: 'Hate:0, SelfHarm:0, Sexual:1, Violence:2',
         metadata: expect.objectContaining({
@@ -105,7 +122,7 @@ describe(url, () => {
       }))
 
       expect(payload.mediaUpload.images[1]).toEqual(expect.objectContaining({
-        imageLink: expect.stringContaining(`/sir-media-uploads/${sessionId}/photo2.jpg`),
+        imageLink: expect.stringContaining(`/sir-media-uploads/${sirid}/photo2.jpg`),
         imageName: 'photo2.jpg',
         severityScores: 'Hate:4, SelfHarm:0, Sexual:0, Violence:0',
         metadata: expect.objectContaining({

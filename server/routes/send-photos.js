@@ -5,18 +5,18 @@ import { sendMessage } from '../services/service-bus.js'
 
 const buildPayload = (request, images, validationResult, uploadContainerUrl) => {
   const validationResponse = validationResult?.response || []
-  const sessionId = request.yar.id
+  const sirId = request.yar.get('sirid')
 
   return {
     mediaUpload: {
-      sessionId,
+      sessionId: sirId,
       timestamp: new Date().toISOString(),
       images: images.map((image, index) => {
         const imageSafety = validationResponse[index] || {}
         const imageName = image.finalFilename.split('/').pop()
 
         return {
-          imageLink: `${uploadContainerUrl}/${sessionId}/${imageName}`,
+          imageLink: `${uploadContainerUrl}/${sirId}/${imageName}`,
           imageName,
           severityScores: imageSafety.severityScores || 'none',
           metadata: {
