@@ -280,6 +280,7 @@ export default [
         parse: true,
         multipart: true,
         allow: 'multipart/form-data',
+        // look into validate size https://github.com/DEFRA/biodiversity-net-gain-service/blob/0502ed1310a20f9fa1fb17aa5b147b1116686288/packages/webapp/src/routes/land/upload-legal-agreement.js#L127
         maxBytes: PAYLOAD_MAX_BYTES
       }
     }
