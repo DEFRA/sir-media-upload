@@ -194,7 +194,10 @@ async function handleFileUpload (request, uploadId) {
     .getBlockBlobClient(finalFilename)
     .uploadData(maxSizedBuffer)
 
-  return finalFilename
+  return {
+    finalFilename,
+    fileSizeBytes: maxSizedBuffer.length
+  }
 }
 
 const handlers = {
@@ -219,11 +222,11 @@ const handlers = {
     }
 
     try {
-      const finalFilename = await handleFileUpload(request, uploadId)
+      const { finalFilename, fileSizeBytes } = await handleFileUpload(request, uploadId)
       const fileLoc = await createThumbnail(finalFilename)
 
       const thumbLoc = `/public/thumbnails/${fileLoc}`
-      thumbnails.push({ finalFilename, thumbLoc })
+      thumbnails.push({ finalFilename, thumbLoc, fileSizeBytes })
 
       request.yar.set('thumbnails', thumbnails)
 

@@ -6,7 +6,7 @@ import inert from './plugins/inert.js'
 import router from './plugins/router.js'
 import views from './plugins/views.js'
 import cache from './plugins/cache.js'
-// import logging from './plugins/logging.js'
+import logging from './plugins/logging.js'
 import session from './plugins/session.js'
 // import onPostHandler from './plugins/on-post-handler.js'
 
@@ -45,7 +45,7 @@ const init = async server => {
 }
 
 const registerPlugins = async server => {
-//   await server.register(logging)
+  await server.register(logging)
   await server.register(session)
   //   await server.register(errorPages)
   await server.register(inert)

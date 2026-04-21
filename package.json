@@ -26,6 +26,7 @@
   "dependencies": {
     "@azure-rest/ai-content-safety": "^1.0.1",
     "@azure/core-auth": "^1.10.1",
+    "@azure/service-bus": "^7.9.5",
     "@azure/storage-blob": "^12.31.0",
     "@hapi/catbox-redis": "^7.0.2",
     "@hapi/hapi": "21.4.3",
@@ -33,6 +34,7 @@
     "@hapi/vision": "^7.0.3",
     "@hapi/yar": "11.0.3",
     "govuk-frontend": "^6.1.0",
+    "hapi-pino": "^12.1.0",
     "heic-convert": "^2.1.0",
     "joi": "^18.0.2",
     "moment": "^2.30.1",
