@@ -19,6 +19,7 @@ const mockValidPng = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+5e0AAAAASUVORK5CYII=',
   'base64'
 )
+const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024
 const UPLOAD_MAX_BYTES = 4 * 1024 * 1024
 const MAX_IMAGE_RESIZE_DEPTH = 5
 
@@ -407,6 +408,71 @@ describe(url, () => {
           headers: form.getHeaders()
         }, 200)
         expect(response.result).toContain('The selected file must be smaller than 4MB')
+      })
+
+      it('should return payload max-size message when payload exceeds PAYLOAD_MAX_BYTES', async () => {
+        const oversizedPayload = Buffer.alloc(PAYLOAD_MAX_BYTES + 1024, 1)
+        const form = createForm('oversized.png', oversizedPayload, 'image/png')
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 200)
+
+        expect(response.result).toContain('The selected file must be smaller than')
+      })
+    })
+
+    describe('payload failAction', () => {
+      const postRoute = addPhoto.default.find(route => route.method === 'POST' && route.path === url)
+      const failAction = postRoute.options.payload.failAction
+
+      it('should render size error view and return takeover for 413 payload errors', async () => {
+        const takeover = jest.fn(() => 'takeover-result')
+        const h = {
+          view: jest.fn(() => ({ takeover }))
+        }
+
+        await failAction(
+          { path: url },
+          h,
+          { output: { statusCode: 413 } }
+        )
+
+        expect(h.view).toHaveBeenCalledWith(
+          constants.views.ADD_A_PHOTO,
+          expect.objectContaining({
+            maxSelectedFiles: false,
+            errorMessage: expect.any(String)
+          })
+        )
+      })
+
+      it('should call takeover on 413 payload error response', async () => {
+        const takeover = jest.fn(() => 'takeover-result')
+        const h = {
+          view: jest.fn(() => ({ takeover }))
+        }
+
+        const result = await failAction(
+          { path: url },
+          h,
+          { output: { statusCode: 413 } }
+        )
+
+        expect(result).toBe('takeover-result')
+      })
+
+      it('should throw original error for non-413 payload errors', () => {
+        const h = {
+          view: jest.fn(() => ({ takeover: jest.fn() }))
+        }
+
+        const payloadError = new Error('bad payload')
+        payloadError.output = { statusCode: 400 }
+
+        expect(() => failAction({ path: url }, h, payloadError)).toThrow('bad payload')
       })
     })
 

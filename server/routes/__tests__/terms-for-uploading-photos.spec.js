@@ -10,5 +10,10 @@ describe(url, () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('Terms for uploading photos')
     })
+
+    it('Should hide back link when hideBackLink is true', async () => {
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
+      expect(response.payload).not.toContain('id="back-link"')
+    })
   })
 })

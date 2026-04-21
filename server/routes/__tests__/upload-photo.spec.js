@@ -43,6 +43,18 @@ describe(url, () => {
 
       expect(response.payload).toContain(returnFormattedDate(dateTime))
     })
+
+    it('should store sirid in session', async () => {
+      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
+      expect(response.request.yar.get('sirid')).toBe('test-session-id')
+    })
+
+    it('should call cache.get with the sirid from query', async () => {
+      const cacheGetSpy = jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue(null)
+      await submitGetRequest({ url }, header, constants.statusCodes.OK)
+      expect(cacheGetSpy).toHaveBeenCalledWith('test-session-id')
+    })
   })
   describe('POST', () => {
     it(`Should return redirect response for ${constants.routes.UPLOAD_PHOTO}`, async () => {
