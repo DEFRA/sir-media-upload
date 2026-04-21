@@ -1,12 +1,13 @@
 import ContentSafetyClient, { isUnexpected } from '@azure-rest/ai-content-safety'
 import { AzureKeyCredential } from '@azure/core-auth'
 import { getUploadContainerClient } from './blob-storage.js'
+import config from '../utils/config.js'
 
 const contentSafetyApiVersion = '2023-10-01'
 
 const getContentSafetyConfig = () => ({
-  endpoint: process.env.CONTENT_SAFETY_ENDPOINT,
-  key: process.env.CONTENT_SAFETY_KEY
+  endpoint: config.contentSafetyEndpoint,
+  key: config.contentSafetyKey
 })
 
 const getContentSafetyClient = () => {

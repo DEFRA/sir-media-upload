@@ -1,5 +1,6 @@
 import { submitGetRequest } from '../../__test-helpers__/server.js'
 import constants from '../../utils/constants.js'
+import config from '../../utils/config.js'
 import successRoute from '../success.js'
 
 const url = constants.routes.SUCCESS
@@ -27,7 +28,7 @@ describe(url, () => {
 
     it(`Should pass feedback link to view for ${url}`, () => {
       const baseUrl = 'https://sir.example.gov.uk'
-      process.env.SMART_INCIDENT_REPORTING_BASE_URL = baseUrl
+      config.smartIncidentReportingBaseUrl = baseUrl
 
       const view = jest.fn()
       successRoute[0].handler({}, { view })
