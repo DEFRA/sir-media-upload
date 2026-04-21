@@ -1,6 +1,6 @@
 // returns date in this format -> 2.40 pm on Monday 30 April 2026
-const returnFormattedDate = () => {
-  const d = new Date()
+const returnFormattedDate = (dateTime = new Date()) => {
+  const d = dateTime instanceof Date ? dateTime : new Date(dateTime)
   const time = d.toLocaleTimeString('en-GB', {
     hour: 'numeric',
     minute: '2-digit',

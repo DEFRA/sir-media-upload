@@ -40,7 +40,10 @@ const validateSingleImage = async (containerClient, finalFilename, contentSafety
   const scores = categories.map(({ category, severity }) => `${category}:${severity}`).join(', ')
   console.log(`Content Safety severity scores for ${finalFilename}: ${scores || 'none'}`)
 
-  return result.body
+  return {
+    ...result.body,
+    severityScores: scores || 'none'
+  }
 }
 
 const validate = async (thumbnails = []) => {
