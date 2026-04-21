@@ -48,7 +48,7 @@ const config = {
   blobServiceUrl: process.env.AZURE_BLOB_SERVICE_URL,
   storageAccount: process.env.AZURE_STORAGE_ACCOUNT,
   storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
-    smartIncidentReportingBaseUrl: process.env.SMART_INCIDENT_REPORTING_BASE_URL,
+  smartIncidentReportingBaseUrl: process.env.SMART_INCIDENT_REPORTING_BASE_URL,
   contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
   contentSafetyKey: process.env.CONTENT_SAFETY_KEY
 }

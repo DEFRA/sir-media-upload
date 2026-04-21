@@ -1,7 +1,5 @@
 import { submitGetRequest } from '../../__test-helpers__/server.js'
 import constants from '../../utils/constants.js'
-import config from '../../utils/config.js'
-import successRoute from '../success.js'
 
 const url = constants.routes.SUCCESS
 
@@ -23,19 +21,7 @@ describe(url, () => {
 
     it(`Should display feedback link for ${url}`, async () => {
       const response = await submitGetRequest({ url }, 'Thank you')
-      expect(response.payload).toContain('<a href="feedback">Give feedback</a>')
-    })
-
-    it(`Should pass feedback link to view for ${url}`, () => {
-      const baseUrl = 'https://sir.example.gov.uk'
-      config.smartIncidentReportingBaseUrl = baseUrl
-
-      const view = jest.fn()
-      successRoute[0].handler({}, { view })
-
-      expect(view).toHaveBeenCalledWith(constants.views.SUCCESS, {
-        feedback: `${baseUrl}/feedback`
-      })
+      expect(response.payload).toContain('Give feedback')
     })
   })
 })

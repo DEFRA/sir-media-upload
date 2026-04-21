@@ -44,7 +44,8 @@ export default {
       serviceNameUrl: constants.urls.GOV_UK_SERVICE_HOME,
       serviceName: 'TO DO: set service name',
       titleSuffix: ' TO DO - GOV.UK',
-      smartIncidentReportingBaseUrl: config.smartIncidentReportingBaseUrl
+      smartIncidentReportingBaseUrl: config.smartIncidentReportingBaseUrl,
+      feedback: `${config.smartIncidentReportingBaseUrl}/feedback`
     }
   }
 }
