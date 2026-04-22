@@ -7,6 +7,10 @@ const handlers = {
     const cachedData = await request.server.app.mediaUploadCache.get(sirid)
     const journey = cachedData?.journey
     const dateTime = cachedData?.dateTime
+    // const sirid = request.query.sirid || 'test-sirid'
+    // const cachedData = await request.server.app.mediaUploadCache.get(sirid)
+    // const journey = cachedData?.journey || 'test journey'
+    // const dateTime = cachedData?.dateTime || new Date().toISOString()
 
     request.yar.set('sirid', sirid)
 
