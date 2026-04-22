@@ -38,9 +38,6 @@ const handlers = {
   },
   post: async (request, h) => {
     const images = request.yar.get('thumbnails') || []
-    if (images.length === 0) {
-      return h.redirect(constants.routes.YOUR_PHOTOS)
-    }
     const uploadContainerClient = await getUploadContainerClient()
     const validationResult = await imageChecker.validate(images)
     const payload = buildPayload(request, images, validationResult, uploadContainerClient.url)
