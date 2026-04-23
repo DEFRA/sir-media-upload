@@ -11,6 +11,7 @@ const SEND_PHOTOS = 'send-photos'
 const SUCCESS = 'success'
 const TERMS_FOR_UPLOADING_PHOTOS = 'terms-for-uploading-photos'
 const LINK_USED = 'link-used'
+const HEALTH = 'health'
 
 const views = {
   HOME,
@@ -21,7 +22,8 @@ const views = {
   SEND_PHOTOS,
   SUCCESS,
   TERMS_FOR_UPLOADING_PHOTOS,
-  LINK_USED
+  LINK_USED,
+  HEALTH
 }
 
 const routes = {
