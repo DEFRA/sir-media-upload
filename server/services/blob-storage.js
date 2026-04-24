@@ -1,4 +1,6 @@
-import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob'
+import { DefaultAzureCredential } from "@azure/identity";
+// import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob'
+import { BlobServiceClient } from '@azure/storage-blob'
 import config from '../utils/config.js'
 
 const uploadContainerName = 'sir-media-uploads'
@@ -10,7 +12,7 @@ const getUploadContainerClient = async () => {
 
   const blobServiceClient = new BlobServiceClient(
     config.blobServiceUrl,
-    new StorageSharedKeyCredential(config.storageAccount, config.storageAccessKey)
+    new DefaultAzureCredential()
   )
 
   const containerClient = blobServiceClient.getContainerClient(uploadContainerName)
