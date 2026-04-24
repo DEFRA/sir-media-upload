@@ -16,7 +16,8 @@ const handlers = {
         filename: files.finalFilename.split('/').pop(),
         index
       })),
-      remainingPhotos
+      remainingPhotos,
+      backLinkHref: constants.routes.ADD_A_PHOTO
     })
   },
 
