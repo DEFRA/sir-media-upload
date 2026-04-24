@@ -4,7 +4,17 @@ import { returnFormattedDate } from '../utils/date-helpers.js'
 const handlers = {
   get: async (request, h) => {
     const { sirid } = request.query
+
+    if (!sirid) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
     const cachedData = await request.server.app.mediaUploadCache.get(sirid)
+
+    if (!cachedData) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+    
     const journey = cachedData?.journey
     const dateTime = cachedData?.dateTime
 
