@@ -29,14 +29,30 @@ const buildPayload = (request, images, validationResult, uploadContainerUrl) => 
   }
 }
 
+const hasSirId = (request) => {
+  const sirid = request.yar.get('sirid')
+  if (!sirid) {
+    return false
+  }
+  return true
+}
+
 const handlers = {
   get: (request, h) => {
+    if (!hasSirId(request)) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
     const images = request.yar.get('thumbnails') || []
     return h.view(constants.views.SEND_PHOTOS, {
       photos: images.length
     })
   },
   post: async (request, h) => {
+    if (!hasSirId(request)) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
     const images = request.yar.get('thumbnails') || []
     const uploadContainerClient = await getUploadContainerClient()
     const validationResult = await imageChecker.validate(images)

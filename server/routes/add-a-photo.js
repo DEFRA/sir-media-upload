@@ -200,8 +200,20 @@ async function handleFileUpload (request, uploadId) {
   }
 }
 
+const hasSirId = (request) => {
+  const sirid = request.yar.get('sirid')
+  if (!sirid) {
+    return false
+  }
+  return true
+}
+
 const handlers = {
   get: (request, h) => {
+    if (!hasSirId(request)) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
     if (!request.yar.get('upload-id')) {
       request.yar.set('upload-id', crypto.randomUUID())
     }
@@ -212,6 +224,10 @@ const handlers = {
   },
 
   post: async (request, h) => {
+    if (!hasSirId(request)) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
     const uploadId = request.yar.get('upload-id')
     const thumbnails = request.yar.get('thumbnails') || []
 

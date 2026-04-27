@@ -14,7 +14,7 @@ const handlers = {
     if (!cachedData) {
       return h.redirect(constants.routes.LINK_USED)
     }
-    
+
     const journey = cachedData?.journey
     const dateTime = cachedData?.dateTime
 

@@ -6,8 +6,20 @@ import { getUploadContainerClient } from '../services/blob-storage.js'
 
 const MAX_PHOTOS = 5
 
+const hasSirId = (request) => {
+  const sirid = request.yar.get('sirid')
+  if (!sirid) {
+    return false
+  }
+  return true
+}
+
 const handlers = {
   get: (request, h) => {
+    if (!hasSirId(request)) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
     const thumbnails = request.yar.get('thumbnails') || []
     const remainingPhotos = MAX_PHOTOS - thumbnails.length
     return h.view(constants.views.YOUR_PHOTOS, {
@@ -21,6 +33,10 @@ const handlers = {
   },
 
   post: async (request, h) => {
+    if (!hasSirId(request)) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
     const imageIndex = Number.parseInt(request.payload.imageIndex, 10)
     const thumbnails = request.yar.get('thumbnails') || []
 
