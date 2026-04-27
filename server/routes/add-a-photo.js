@@ -4,7 +4,7 @@ import heicConvert from 'heic-convert'
 import fs from 'node:fs'
 import path from 'node:path'
 import dirname from '../../dirname.cjs'
-import crypto from 'node:crypto'
+// import crypto from 'node:crypto'
 import { getUploadContainerClient } from '../services/blob-storage.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
@@ -214,9 +214,11 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    if (!request.yar.get('upload-id')) {
-      request.yar.set('upload-id', crypto.randomUUID())
-    }
+    // Upload id needs to correlate to sirid
+    // we already have sir id so use that
+    // if (!request.yar.get('upload-id')) {
+    //   request.yar.set('upload-id', crypto.randomUUID())
+    // }
 
     return h.view(constants.views.ADD_A_PHOTO, {
       maxSelectedFiles: false
@@ -228,7 +230,7 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    const uploadId = request.yar.get('upload-id')
+    const uploadId = request.yar.get('sirid')
     const thumbnails = request.yar.get('thumbnails') || []
 
     if (thumbnails.length >= MAX_SELECTED_FILES) {

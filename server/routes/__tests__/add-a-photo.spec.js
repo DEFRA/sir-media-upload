@@ -68,16 +68,16 @@ describe(url, () => {
       expect(response.result).toContain(header)
     })
 
-    it('should set upload-id if not present', async () => {
-      const response = await submitGetRequest({ url }, header)
-      expect(response.request.yar.get('upload-id')).toBeDefined()
-    })
+    // it('should set upload-id if not present', async () => {
+    //   const response = await submitGetRequest({ url }, header)
+    //   expect(response.request.yar.get('upload-id')).toBeDefined()
+    // })
 
-    it('should keep existing upload-id if already present', async () => {
-      const existingUploadId = 'existing-upload-id'
-      const response = await submitGetRequest({ url }, header, 200, { 'upload-id': existingUploadId })
-      expect(response.request.yar.get('upload-id')).toBe(existingUploadId)
-    })
+    // it('should keep existing upload-id if already present', async () => {
+    //   const existingUploadId = 'existing-upload-id'
+    //   const response = await submitGetRequest({ url }, header, 200, { 'upload-id': existingUploadId })
+    //   expect(response.request.yar.get('upload-id')).toBe(existingUploadId)
+    // })
   })
 
   describe('POST', () => {
