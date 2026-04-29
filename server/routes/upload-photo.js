@@ -9,9 +9,9 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    /* const cachedData = await request.server.app.mediaUploadCache.get(sirid)
+    const cachedData = await request.server.app.mediaUploadCache.get(sirid)
 
-    if (!cachedData) {
+    /* if (!cachedData) {
       return h.redirect(constants.routes.LINK_USED)
     }
     */
