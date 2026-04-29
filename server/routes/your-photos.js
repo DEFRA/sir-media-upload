@@ -3,23 +3,17 @@ import fs from 'node:fs'
 import path from 'node:path'
 import dirname from '../../dirname.cjs'
 import { getUploadContainerClient } from '../services/blob-storage.js'
+import { addSirIdToQueryString, hasValidSirId } from '../utils/upload-session-helpers.js'
 
 const MAX_PHOTOS = 5
 
-const hasSirId = (request) => {
-  const sirid = request.yar.get('sirid')
-  if (!sirid) {
-    return false
-  }
-  return true
-}
-
 const handlers = {
-  get: (request, h) => {
-    if (!hasSirId(request)) {
+  get: async (request, h) => {
+    if (!(await hasValidSirId(request))) {
       return h.redirect(constants.routes.LINK_USED)
     }
 
+    const { sirid } = request.query
     const thumbnails = request.yar.get('thumbnails') || []
     const remainingPhotos = MAX_PHOTOS - thumbnails.length
     return h.view(constants.views.YOUR_PHOTOS, {
@@ -28,12 +22,13 @@ const handlers = {
         filename: files.finalFilename.split('/').pop(),
         index
       })),
-      remainingPhotos
+      remainingPhotos,
+      sirid
     })
   },
 
   post: async (request, h) => {
-    if (!hasSirId(request)) {
+    if (!(await hasValidSirId(request))) {
       return h.redirect(constants.routes.LINK_USED)
     }
 
@@ -72,7 +67,7 @@ const handlers = {
       }
     }
 
-    return h.redirect(constants.routes.YOUR_PHOTOS)
+    return h.redirect(addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS))
   }
 }
 

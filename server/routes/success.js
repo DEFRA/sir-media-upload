@@ -1,22 +1,18 @@
 import constants from '../utils/constants.js'
-
-const hasSirId = (request) => {
-  const sirid = request.yar.get('sirid')
-  if (!sirid) {
-    return false
-  }
-  return true
-}
+import { hasValidSirId } from '../utils/upload-session-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
-    if (!hasSirId(request)) {
+    if (!(await hasValidSirId(request))) {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    const sirid = request.yar.get('sirid')
+    // FIXME: we need to delete local thumbnails too
+    // We need a mechanism to put a TTL on them and auto delete
+    // And also make sure we add thumbnails to blob storage
+    const { sirid } = request.query
     await request.server.app.mediaUploadCache.drop(sirid)
-    request.yar.reset()
+    // request.yar.reset() // probably don't want to do this
 
     const feedback = process.env.SMART_INCIDENT_REPORTING_BASE_URL + '/feedback'
     return h.view(constants.views.SUCCESS, { feedback })

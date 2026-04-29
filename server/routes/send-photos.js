@@ -2,6 +2,7 @@ import constants from '../utils/constants.js'
 import imageChecker from '../services/image-checker.js'
 import { getUploadContainerClient } from '../services/blob-storage.js'
 import { sendMessage } from '../services/service-bus.js'
+import { hasValidSirId } from '../utils/upload-session-helpers.js'
 
 const buildPayload = (request, images, validationResult, uploadContainerUrl) => {
   const validationResponse = validationResult?.response || []
@@ -29,17 +30,9 @@ const buildPayload = (request, images, validationResult, uploadContainerUrl) => 
   }
 }
 
-const hasSirId = (request) => {
-  const sirid = request.yar.get('sirid')
-  if (!sirid) {
-    return false
-  }
-  return true
-}
-
 const handlers = {
-  get: (request, h) => {
-    if (!hasSirId(request)) {
+  get: async (request, h) => {
+    if (!(await hasValidSirId(request))) {
       return h.redirect(constants.routes.LINK_USED)
     }
 
@@ -49,7 +42,7 @@ const handlers = {
     })
   },
   post: async (request, h) => {
-    if (!hasSirId(request)) {
+    if (!(await hasValidSirId(request))) {
       return h.redirect(constants.routes.LINK_USED)
     }
 

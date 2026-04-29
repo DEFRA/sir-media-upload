@@ -6,6 +6,7 @@ import path from 'node:path'
 import dirname from '../../dirname.cjs'
 // import crypto from 'node:crypto'
 import { getUploadContainerClient } from '../services/blob-storage.js'
+import { addSirIdToQueryString, hasValidSirId } from '../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
@@ -200,17 +201,9 @@ async function handleFileUpload (request, uploadId) {
   }
 }
 
-const hasSirId = (request) => {
-  const sirid = request.yar.get('sirid')
-  if (!sirid) {
-    return false
-  }
-  return true
-}
-
 const handlers = {
-  get: (request, h) => {
-    if (!hasSirId(request)) {
+  get: async (request, h) => {
+    if (!(await hasValidSirId(request))) {
       return h.redirect(constants.routes.LINK_USED)
     }
 
@@ -226,7 +219,7 @@ const handlers = {
   },
 
   post: async (request, h) => {
-    if (!hasSirId(request)) {
+    if (!(await hasValidSirId(request))) {
       return h.redirect(constants.routes.LINK_USED)
     }
 
@@ -248,7 +241,7 @@ const handlers = {
 
       request.yar.set('thumbnails', thumbnails)
 
-      return h.redirect(constants.routes.YOUR_PHOTOS)
+      return h.redirect(addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS))
     } catch (err) {
       console.log('Upload error:', err)
       switch (err.code) {
