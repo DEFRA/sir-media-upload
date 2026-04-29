@@ -20,10 +20,6 @@ const handlers = {
     })
   },
   post: async (request, h) => {
-    console.log('--------------------------')
-    console.log('POST /upload-photo')
-    console.log('Request query:', request.query)
-    console.log('--------------------------')
     if (!(await hasValidSirId(request))) {
       return h.redirect(constants.routes.LINK_USED)
     }

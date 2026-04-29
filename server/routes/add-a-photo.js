@@ -207,12 +207,6 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    // Upload id needs to correlate to sirid
-    // we already have sir id so use that
-    // if (!request.yar.get('upload-id')) {
-    //   request.yar.set('upload-id', crypto.randomUUID())
-    // }
-
     return h.view(constants.views.ADD_A_PHOTO, {
       maxSelectedFiles: false
     })
@@ -223,6 +217,7 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
+    // FIXME: use sirid and thumbnails from session details that correlate to the sirid
     const uploadId = request.yar.get('sirid')
     const thumbnails = request.yar.get('thumbnails') || []
 
@@ -239,6 +234,9 @@ const handlers = {
       const thumbLoc = `/public/thumbnails/${fileLoc}`
       thumbnails.push({ finalFilename, thumbLoc, fileSizeBytes })
 
+      // FIXME: these need to go into the session details
+      // that correlate to the sir id
+      // need to create the function in upload-session-helpers.js to handle this
       request.yar.set('thumbnails', thumbnails)
 
       return h.redirect(addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS))

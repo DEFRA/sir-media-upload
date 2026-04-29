@@ -6,6 +6,7 @@ import { hasValidSirId } from '../utils/upload-session-helpers.js'
 
 const buildPayload = (request, images, validationResult, uploadContainerUrl) => {
   const validationResponse = validationResult?.response || []
+  // FIXME
   const sirId = request.yar.get('sirid')
 
   return {
@@ -36,6 +37,7 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
+    // FIXME
     const images = request.yar.get('thumbnails') || []
     return h.view(constants.views.SEND_PHOTOS, {
       photos: images.length
@@ -46,6 +48,8 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
+    // FIXME: will need to get these from the session details that correlate to the sirid
+    // need to create the function in upload-session-helpers.js to handle this
     const images = request.yar.get('thumbnails') || []
     const uploadContainerClient = await getUploadContainerClient()
     const validationResult = await imageChecker.validate(images)

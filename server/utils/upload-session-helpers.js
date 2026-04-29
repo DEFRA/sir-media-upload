@@ -13,10 +13,17 @@ function addSirIdToSession (request) {
   return sirid
 }
 
-function removeSirIdFromSession (request, sirid) {
+// FIXME: need functions to add and remove images/thumbnail details to
+// session related to the sirid
+
+function removeSirIdFromSession (request) {
+  const { sirid } = request.query
+
   const existingUploads = request.yar.get('existing-uploads') || []
   const updatedUploads = existingUploads.filter(id => id !== sirid)
   request.yar.set('existing-uploads', updatedUploads)
+
+  return sirid
 }
 
 function addSirIdToQueryString (request, url) {

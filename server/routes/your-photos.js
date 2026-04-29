@@ -13,6 +13,7 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
+    // FIXME: get thumbnails from session details that correlate to the sirid from upload-session-helpers.js
     const { sirid } = request.query
     const thumbnails = request.yar.get('thumbnails') || []
     const remainingPhotos = MAX_PHOTOS - thumbnails.length
@@ -33,6 +34,7 @@ const handlers = {
     }
 
     const imageIndex = Number.parseInt(request.payload.imageIndex, 10)
+    // FIXME
     const thumbnails = request.yar.get('thumbnails') || []
 
     if (!Number.isNaN(imageIndex) && imageIndex >= 0 && imageIndex < thumbnails.length) {
@@ -61,6 +63,9 @@ const handlers = {
 
         // Remove from session array
         thumbnails.splice(imageIndex, 1)
+        // FIXME: these need to go into the session details
+        // that correlate to the sir id
+        // need to create the function in upload-session-helpers.js to handle this
         request.yar.set('thumbnails', thumbnails)
       } catch (err) {
         console.error('Error removing image:', err)

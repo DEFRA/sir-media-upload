@@ -1,5 +1,5 @@
 import constants from '../utils/constants.js'
-import { hasValidSirId } from '../utils/upload-session-helpers.js'
+import { hasValidSirId, removeSirIdFromSession } from '../utils/upload-session-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
@@ -8,7 +8,7 @@ const handlers = {
     }
 
     // FIXME: we need to delete local thumbnails too when submitted
-    const { sirid } = request.query
+    const sirid = removeSirIdFromSession(request)
     await request.server.app.mediaUploadCache.drop(sirid)
 
     const feedback = process.env.SMART_INCIDENT_REPORTING_BASE_URL + '/feedback'
