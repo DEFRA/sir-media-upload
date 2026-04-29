@@ -5,11 +5,16 @@ const handlers = {
   get: async (request, h) => {
     const { sirid } = request.query
 
-    const cachedData = await request.server.app.mediaUploadCache.get(sirid)
+    if (!sirid) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
+    /* const cachedData = await request.server.app.mediaUploadCache.get(sirid)
 
     if (!cachedData) {
       return h.redirect(constants.routes.LINK_USED)
     }
+    */
     
     const journey = cachedData?.journey
     const dateTime = cachedData?.dateTime
