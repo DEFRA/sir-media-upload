@@ -7,12 +7,9 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    // FIXME: we need to delete local thumbnails too
-    // We need a mechanism to put a TTL on them and auto delete
-    // And also make sure we add thumbnails to blob storage
+    // FIXME: we need to delete local thumbnails too when submitted
     const { sirid } = request.query
     await request.server.app.mediaUploadCache.drop(sirid)
-    // request.yar.reset() // probably don't want to do this
 
     const feedback = process.env.SMART_INCIDENT_REPORTING_BASE_URL + '/feedback'
     return h.view(constants.views.SUCCESS, { feedback })

@@ -28,15 +28,12 @@ async function hasValidSirId (request) {
   const { sirid } = request.query
 
   if (!sirid) {
-    console.log('No sirid in query')
-    console.log('Request query:', request.query)
     return false
   }
 
   const cachedData = await request.server.app.mediaUploadCache.get(sirid)
 
   if (!cachedData) {
-    console.log('No cached data for sirid:', sirid)
     return false
   }
 
