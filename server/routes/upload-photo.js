@@ -24,7 +24,8 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    return h.redirect(addSirIdToQueryString(request, constants.routes.ADD_A_PHOTO))
+    const redirectUrl = addSirIdToQueryString(request, constants.routes.ADD_A_PHOTO)
+    return h.redirect(redirectUrl)
   }
 }
 

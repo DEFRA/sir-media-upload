@@ -1,4 +1,5 @@
 import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/server.js'
+import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
 import fs from 'node:fs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
@@ -13,8 +14,14 @@ jest.mock('node:fs', () => ({
   unlinkSync: jest.fn()
 }))
 
-const url = constants.routes.YOUR_PHOTOS
+const baseUrl = constants.routes.YOUR_PHOTOS
+const url = `${baseUrl}?sirid=test-session-id`
 const header = 'Your photos'
+
+const getUpdatedThumbnails = (response, sirid = 'test-session-id') => {
+  const existingUploads = response.request.yar.get('existing-uploads')
+  return existingUploads[sirid]?.thumbnails || []
+}
 
 const mockThumbnails = [
   {
@@ -27,7 +34,7 @@ const mockThumbnails = [
   }
 ]
 
-describe(url, () => {
+describe(baseUrl, () => {
   let mockDeleteIfExists
 
   beforeEach(() => {
@@ -41,6 +48,8 @@ describe(url, () => {
 
     fs.existsSync.mockReturnValue(true)
     fs.unlinkSync.mockImplementation(() => {})
+
+    getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
   })
 
   afterEach(() => {
@@ -51,6 +60,11 @@ describe(url, () => {
     it('should return success response and correct view', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('Your photos')
+    })
+
+    it('should redirect to link-used when sirid is missing', async () => {
+      const response = await submitGetRequest({ url: baseUrl }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
     it('should display correct header', async () => {
@@ -66,7 +80,7 @@ describe(url, () => {
 
     it('should show correct message when some photos added (remainingPhotos between 1-4)', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails: mockThumbnails
+        'existing-uploads': { 'test-session-id': { thumbnails: mockThumbnails } }
       })
       expect(response.payload).toContain('You can add 3 more photos.')
     })
@@ -78,7 +92,7 @@ describe(url, () => {
       }))
 
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails
+        'existing-uploads': { 'test-session-id': { thumbnails } }
       })
       expect(response.payload).toContain('You can add 1 more photo.')
     })
@@ -90,14 +104,14 @@ describe(url, () => {
       }))
 
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails
+        'existing-uploads': { 'test-session-id': { thumbnails } }
       })
       expect(response.payload).toContain('You have added the maximum number of photos allowed.')
     })
 
     it('should display thumbnails from session', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails: mockThumbnails
+        'existing-uploads': { 'test-session-id': { thumbnails: mockThumbnails } }
       })
       expect(response.payload).toContain('photo1.png')
       expect(response.payload).toContain('photo2.jpg')
@@ -108,15 +122,15 @@ describe(url, () => {
     it('should show "Add a photo" link when no photos added', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {})
       expect(response.payload).toContain('Add a photo')
-      expect(response.payload).toContain('href="/add-a-photo"')
+      expect(response.payload).toContain('href="/add-a-photo?sirid=test-session-id"')
     })
 
     it('should show "Add another photo" link when some photos added', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails: mockThumbnails
+        'existing-uploads': { 'test-session-id': { thumbnails: mockThumbnails } }
       })
       expect(response.payload).toContain('Add another photo')
-      expect(response.payload).toContain('href="/add-a-photo"')
+      expect(response.payload).toContain('href="/add-a-photo?sirid=test-session-id"')
     })
 
     it('should not show add photo link when max photos reached', async () => {
@@ -126,7 +140,7 @@ describe(url, () => {
       }))
 
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails
+        'existing-uploads': { 'test-session-id': { thumbnails } }
       })
       expect(response.payload).not.toContain('Add another photo')
       expect(response.payload).not.toContain('Add a photo')
@@ -139,7 +153,7 @@ describe(url, () => {
 
     it('should show Remove button for each photo', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails: mockThumbnails
+        'existing-uploads': { 'test-session-id': { thumbnails: mockThumbnails } }
       })
       expect(response.payload).toContain('Remove')
       expect(response.payload).toContain('govuk-visually-hidden')
@@ -149,7 +163,7 @@ describe(url, () => {
 
     it('should handle empty thumbnails array', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails: []
+        'existing-uploads': { 'test-session-id': { thumbnails: [] } }
       })
       expect(response.statusCode).toBe(constants.statusCodes.OK)
       expect(response.payload).toContain('Your photos')
@@ -157,13 +171,22 @@ describe(url, () => {
   })
 
   describe('POST', () => {
+    it('should redirect to link-used when sirid is missing', async () => {
+      const response = await submitPostRequest({
+        url: baseUrl,
+        payload: { imageIndex: '0' }
+      }, constants.statusCodes.REDIRECT)
+
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
     it('should redirect to YOUR_PHOTOS after removing a photo', async () => {
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: '0' }
-      }, 302, { thumbnails: [...mockThumbnails] })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...mockThumbnails] } } })
 
-      expect(response.headers.location).toBe(constants.routes.YOUR_PHOTOS)
+      expect(response.headers.location).toBe(`${baseUrl}?sirid=test-session-id`)
     })
 
     it('should remove photo from session', async () => {
@@ -171,9 +194,9 @@ describe(url, () => {
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: '0' }
-      }, 302, { thumbnails })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
 
-      const updatedThumbnails = response.request.yar.get('thumbnails')
+      const updatedThumbnails = getUpdatedThumbnails(response)
       expect(updatedThumbnails.length).toBe(1)
       expect(updatedThumbnails[0].finalFilename).toBe('upload-id/photo2.jpg')
     })
@@ -182,7 +205,7 @@ describe(url, () => {
       await submitPostRequest({
         url,
         payload: { imageIndex: '0' }
-      }, 302, { thumbnails: [...mockThumbnails] })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...mockThumbnails] } } })
 
       expect(mockDeleteIfExists).toHaveBeenCalled()
     })
@@ -191,7 +214,7 @@ describe(url, () => {
       await submitPostRequest({
         url,
         payload: { imageIndex: '0' }
-      }, 302, { thumbnails: [...mockThumbnails] })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...mockThumbnails] } } })
 
       // Should be called twice: once for original, once for thumbnail
       expect(mockDeleteIfExists).toHaveBeenCalledTimes(2)
@@ -201,7 +224,7 @@ describe(url, () => {
       await submitPostRequest({
         url,
         payload: { imageIndex: '0' }
-      }, 302, { thumbnails: [...mockThumbnails] })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...mockThumbnails] } } })
 
       expect(fs.existsSync).toHaveBeenCalled()
       expect(fs.unlinkSync).toHaveBeenCalled()
@@ -212,11 +235,11 @@ describe(url, () => {
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: '999' }
-      }, 302, { thumbnails })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
 
-      const updatedThumbnails = response.request.yar.get('thumbnails')
+      const updatedThumbnails = getUpdatedThumbnails(response)
       expect(updatedThumbnails.length).toBe(2)
-      expect(response.headers.location).toBe(constants.routes.YOUR_PHOTOS)
+      expect(response.headers.location).toBe(`${baseUrl}?sirid=test-session-id`)
     })
 
     it('should handle negative imageIndex gracefully', async () => {
@@ -224,9 +247,9 @@ describe(url, () => {
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: '-1' }
-      }, 302, { thumbnails })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
 
-      const updatedThumbnails = response.request.yar.get('thumbnails')
+      const updatedThumbnails = getUpdatedThumbnails(response)
       expect(updatedThumbnails.length).toBe(2)
     })
 
@@ -235,9 +258,9 @@ describe(url, () => {
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: 'invalid' }
-      }, 302, { thumbnails })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
 
-      const updatedThumbnails = response.request.yar.get('thumbnails')
+      const updatedThumbnails = getUpdatedThumbnails(response)
       expect(updatedThumbnails.length).toBe(2)
     })
 
@@ -247,7 +270,7 @@ describe(url, () => {
         payload: { imageIndex: '0' }
       }, 302, {})
 
-      expect(response.headers.location).toBe(constants.routes.YOUR_PHOTOS)
+      expect(response.headers.location).toBe(`${baseUrl}?sirid=test-session-id`)
       expect(response.statusCode).toBe(302)
     })
 
@@ -258,9 +281,9 @@ describe(url, () => {
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: '0' }
-      }, 302, { thumbnails: [...mockThumbnails] })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...mockThumbnails] } } })
 
-      expect(response.headers.location).toBe(constants.routes.YOUR_PHOTOS)
+      expect(response.headers.location).toBe(`${baseUrl}?sirid=test-session-id`)
       expect(consoleSpy).toHaveBeenCalledWith('Error removing image:', expect.any(Error))
 
       consoleSpy.mockRestore()
@@ -272,9 +295,9 @@ describe(url, () => {
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: '0' }
-      }, 302, { thumbnails: [...mockThumbnails] })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...mockThumbnails] } } })
 
-      expect(response.headers.location).toBe(constants.routes.YOUR_PHOTOS)
+      expect(response.headers.location).toBe(`${baseUrl}?sirid=test-session-id`)
       expect(fs.unlinkSync).not.toHaveBeenCalled()
     })
 
@@ -288,9 +311,9 @@ describe(url, () => {
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: '1' }
-      }, 302, { thumbnails: [...thumbnails] })
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...thumbnails] } } })
 
-      const updatedThumbnails = response.request.yar.get('thumbnails')
+      const updatedThumbnails = getUpdatedThumbnails(response)
       expect(updatedThumbnails.length).toBe(2)
       expect(updatedThumbnails[0].finalFilename).toBe('upload-id/photo1.png')
       expect(updatedThumbnails[1].finalFilename).toBe('upload-id/photo3.png')

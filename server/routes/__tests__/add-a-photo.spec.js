@@ -1,4 +1,5 @@
 import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/server.js'
+import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
@@ -45,10 +46,11 @@ const createNoiseImageBuffer = async ({ width, height, format = 'png' }) => {
   return pipeline.png().toBuffer()
 }
 
-const url = constants.routes.ADD_A_PHOTO
+const baseUrl = constants.routes.ADD_A_PHOTO
+const url = `${baseUrl}?sirid=test-session-id`
 const header = 'Add a photo'
 
-describe(url, () => {
+describe(baseUrl, () => {
   beforeEach(() => {
     getUploadContainerClient.mockResolvedValue({
       getBlockBlobClient: () => ({
@@ -56,6 +58,7 @@ describe(url, () => {
         downloadToBuffer: () => Promise.resolve(mockValidPng)
       })
     })
+    getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
   })
 
   afterEach(() => {
@@ -66,6 +69,11 @@ describe(url, () => {
     it('should return correct view', async () => {
       const response = await submitGetRequest({ url }, header)
       expect(response.result).toContain(header)
+    })
+
+    it('should redirect to link-used when sirid is missing', async () => {
+      const response = await submitGetRequest({ url: baseUrl }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
     // it('should set upload-id if not present', async () => {
@@ -81,6 +89,17 @@ describe(url, () => {
   })
 
   describe('POST', () => {
+    it('should redirect to link-used when sirid is missing', async () => {
+      const form = createForm('valid.png', mockValidPng, 'image/png')
+      const response = await submitPostRequest({
+        url: baseUrl,
+        payload: form.getBuffer(),
+        headers: form.getHeaders()
+      }, constants.statusCodes.REDIRECT)
+
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
     describe('file type', () => {
       const makeUploadFile = (filename, contentType = 'image/jpeg') => ({
         hapi: {
@@ -269,7 +288,7 @@ describe(url, () => {
         url,
         payload: form.getBuffer(),
         headers: form.getHeaders()
-      }, 200, { thumbnails })
+      }, 200, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(response.result).toContain('You have added the maximum number of photos allowed')
     })
 
@@ -425,7 +444,7 @@ describe(url, () => {
     })
 
     describe('payload failAction', () => {
-      const postRoute = addPhoto.default.find(route => route.method === 'POST' && route.path === url)
+      const postRoute = addPhoto.default.find(route => route.method === 'POST' && route.path === baseUrl)
       const failAction = postRoute.options.payload.failAction
 
       it('should render size error view and return takeover for 413 payload errors', async () => {
@@ -517,7 +536,7 @@ describe(url, () => {
           payload: form.getBuffer(),
           headers: form.getHeaders()
         }, 302)
-        expect(response.headers.location).toBe(constants.routes.YOUR_PHOTOS)
+        expect(response.headers.location).toBe(`${constants.routes.YOUR_PHOTOS}?sirid=test-session-id`)
       })
 
       it('should store thumbnails in session', async () => {
@@ -527,7 +546,8 @@ describe(url, () => {
           payload: form.getBuffer(),
           headers: form.getHeaders()
         }, 302)
-        const thumbnails = response.request.yar.get('thumbnails')
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(Array.isArray(thumbnails)).toBe(true)
       })
 
@@ -538,7 +558,8 @@ describe(url, () => {
           payload: form.getBuffer(),
           headers: form.getHeaders()
         }, 302)
-        const thumbnails = response.request.yar.get('thumbnails')
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails.length).toBeGreaterThan(0)
       })
 
@@ -549,7 +570,8 @@ describe(url, () => {
           payload: form.getBuffer(),
           headers: form.getHeaders()
         }, 302)
-        const thumbnails = response.request.yar.get('thumbnails')
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails[0]).toHaveProperty('thumbLoc')
       })
 
@@ -560,7 +582,8 @@ describe(url, () => {
           payload: form.getBuffer(),
           headers: form.getHeaders()
         }, 302)
-        const thumbnails = response.request.yar.get('thumbnails')
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails[0]).toHaveProperty('finalFilename')
       })
 
@@ -571,7 +594,8 @@ describe(url, () => {
           payload: form.getBuffer(),
           headers: form.getHeaders()
         }, 302)
-        const thumbnails = response.request.yar.get('thumbnails')
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails[0]).toHaveProperty('fileSizeBytes')
       })
 
@@ -589,7 +613,8 @@ describe(url, () => {
           payload: form.getBuffer(),
           headers: form.getHeaders()
         }, 302)
-        const thumbnails = response.request.yar.get('thumbnails')
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails[0].finalFilename).toContain('/upload')
       })
     })

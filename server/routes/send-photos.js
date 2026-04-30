@@ -2,12 +2,10 @@ import constants from '../utils/constants.js'
 import imageChecker from '../services/image-checker.js'
 import { getUploadContainerClient } from '../services/blob-storage.js'
 import { sendMessage } from '../services/service-bus.js'
-import { hasValidSirId } from '../utils/upload-session-helpers.js'
+import { hasValidSirId, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
 
-const buildPayload = (request, images, validationResult, uploadContainerUrl) => {
+const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
   const validationResponse = validationResult?.response || []
-  // FIXME
-  const sirId = request.yar.get('sirid')
 
   return {
     mediaUpload: {
@@ -37,10 +35,11 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    // FIXME
-    const images = request.yar.get('thumbnails') || []
+    const { sirid } = request.query
+    const images = getThumbnailsBySirId(request)
     return h.view(constants.views.SEND_PHOTOS, {
-      photos: images.length
+      photos: images.length,
+      sirid
     })
   },
   post: async (request, h) => {
@@ -48,14 +47,14 @@ const handlers = {
       return h.redirect(constants.routes.LINK_USED)
     }
 
-    // FIXME: will need to get these from the session details that correlate to the sirid
-    // need to create the function in upload-session-helpers.js to handle this
-    const images = request.yar.get('thumbnails') || []
+    const { sirid } = request.query
+    const images = getThumbnailsBySirId(request)
     const uploadContainerClient = await getUploadContainerClient()
     const validationResult = await imageChecker.validate(images)
-    const payload = buildPayload(request, images, validationResult, uploadContainerClient.url)
+    const payload = buildPayload(sirid, images, validationResult, uploadContainerClient.url)
     await sendMessage(request.logger, payload)
-    return h.redirect(constants.routes.SUCCESS)
+    const redirectUrl = constants.routes.SUCCESS + (sirid ? `?sirid=${sirid}` : '')
+    return h.redirect(redirectUrl)
   }
 }
 
