@@ -10,7 +10,8 @@
 			html: "We have received your photos"
 		}) }}
 
-		<p>You have already uploaded photos to support your report of {{ journey }}</p>
+		{# IS SCENARIO WE DON'T HAVE THE JOURNEY? #}
+		<p>You have already uploaded photos to support your report{% if journey %} of {{ journey }}{% endif %}</p>
 
 		<p>You cannot add any more photos.</p>
 
