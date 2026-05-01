@@ -46,6 +46,24 @@ const validateSingleImage = async (containerClient, finalFilename, contentSafety
   }
 }
 
+const validateWithRetry = async (containerClient, finalFilename, contentSafetyClient, maxRetries = 3) => {
+  for (const attempt of Array.from({ length: maxRetries }, (_, index) => index + 1)) {
+    try {
+      return await validateSingleImage(containerClient, finalFilename, contentSafetyClient)
+    } catch (error) {
+      console.log(`Content Safety API attempt ${attempt}/${maxRetries} failed for ${finalFilename}: ${error.message}`)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, attempt * 100))
+      }
+    }
+  }
+
+  console.log(`Content Safety severity scores for ${finalFilename}: AIFail:8`)
+  return {
+    severityScores: 'AIFail:8'
+  }
+}
+
 const validate = async (thumbnails = []) => {
   const contentSafetyClient = getContentSafetyClient()
 
@@ -61,7 +79,7 @@ const validate = async (thumbnails = []) => {
     }
 
     const response = await Promise.all(
-      thumbnails.map(({ finalFilename }) => validateSingleImage(containerClient, finalFilename, contentSafetyClient))
+      thumbnails.map(({ finalFilename }) => validateWithRetry(containerClient, finalFilename, contentSafetyClient))
     )
 
     return {
