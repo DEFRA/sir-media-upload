@@ -214,7 +214,8 @@ const handlers = {
     }
 
     return h.view(constants.views.ADD_A_PHOTO, {
-      maxSelectedFiles: false
+      maxSelectedFiles: false,
+      backLinkHref: constants.routes.YOUR_PHOTOS
     })
   },
 
@@ -224,7 +225,8 @@ const handlers = {
 
     if (thumbnails.length >= MAX_SELECTED_FILES) {
       return h.view(constants.views.ADD_A_PHOTO, {
-        maxSelectedFiles: true
+        maxSelectedFiles: true,
+        backLinkHref: constants.routes.YOUR_PHOTOS
       })
     }
 
@@ -244,25 +246,29 @@ const handlers = {
         case 'NO_FILE':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
-            errorMessage: 'Select a file'
+            errorMessage: 'Select a file',
+            backLinkHref: constants.routes.YOUR_PHOTOS
           })
 
         case 'INVALID_IMAGE':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
-            errorMessage: 'Select a file in a different image format, for example JPEG or PNG'
+            errorMessage: 'Select a file in a different image format, for example JPEG or PNG',
+            backLinkHref: constants.routes.YOUR_PHOTOS
           })
 
         case 'FILE_TOO_LARGE':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
-            errorMessage: 'The selected file must be smaller than 4MB'
+            errorMessage: 'The selected file must be smaller than 4MB',
+            backLinkHref: constants.routes.YOUR_PHOTOS
           })
 
         default:
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
-            errorMessage: 'The selected file could not be uploaded – try again'
+            errorMessage: 'The selected file could not be uploaded – try again',
+            backLinkHref: constants.routes.YOUR_PHOTOS
           })
       }
     }
@@ -302,6 +308,7 @@ export default [
 const maximumFileSizeExceeded = (h) => {
   return h.view(constants.views.ADD_A_PHOTO, {
     maxSelectedFiles: false,
-    errorMessage: 'The selected file must be smaller than 25MB'
+    errorMessage: 'The selected file must be smaller than 25MB',
+    backLinkHref: constants.routes.YOUR_PHOTOS
   })
 }

@@ -68,6 +68,11 @@ describe(url, () => {
       expect(response.result).toContain(header)
     })
 
+    it('should render back link to your photos instead of browser history', async () => {
+      const response = await submitGetRequest({ url }, header)
+      expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}"`)
+    })
+
     it('should set upload-id if not present', async () => {
       const response = await submitGetRequest({ url }, header)
       expect(response.request.yar.get('upload-id')).toBeDefined()
