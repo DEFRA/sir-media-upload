@@ -4,7 +4,7 @@ const returnFormattedDate = (dateTime = new Date()) => {
   const time = d.toLocaleTimeString('en-GB', {
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true
+    hourCycle: 'h12'
   }).toLowerCase() // gives "2:48 pm"
 
   const weekday = d.toLocaleDateString('en-GB', { weekday: 'long' })
