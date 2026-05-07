@@ -1,7 +1,7 @@
 import constants from '../utils/constants.js'
 import imageChecker from '../services/image-checker.js'
 import { getUploadContainerClient } from '../services/blob-storage.js'
-import { sendMessage } from '../services/service-bus.js'
+// import { sendMessage } from '../services/service-bus.js'
 import { hasValidSirId, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
 
 const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
@@ -52,7 +52,8 @@ const handlers = {
     const uploadContainerClient = await getUploadContainerClient()
     const validationResult = await imageChecker.validate(images)
     const payload = buildPayload(sirid, images, validationResult, uploadContainerClient.url)
-    await sendMessage(request.logger, payload)
+    console.log('Payload to send to service bus', JSON.stringify(payload, null, 2))
+    // await sendMessage(request.logger, payload)
     const redirectUrl = constants.routes.SUCCESS + (sirid ? `?sirid=${sirid}` : '')
     return h.redirect(redirectUrl)
   }
