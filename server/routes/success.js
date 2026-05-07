@@ -29,8 +29,7 @@ const handlers = {
     removeSirIdFromSession(request)
     await request.server.app.mediaUploadCache.drop(sirid)
 
-    const feedback = process.env.SMART_INCIDENT_REPORTING_BASE_URL + '/feedback'
-    return h.view(constants.views.SUCCESS, { feedback })
+    return h.view(constants.views.SUCCESS)
   }
 }
 

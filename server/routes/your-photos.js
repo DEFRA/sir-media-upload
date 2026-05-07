@@ -23,7 +23,8 @@ const handlers = {
         index
       })),
       remainingPhotos,
-      sirid
+      sirid,
+      backLinkHref: constants.routes.ADD_A_PHOTO
     })
   },
 

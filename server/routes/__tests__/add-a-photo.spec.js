@@ -76,6 +76,16 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should render back link to your photos instead of browser history', async () => {
+      const response = await submitGetRequest({ url }, header)
+      expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}"`)
+    })
+
+    it('should set upload-id if not present', async () => {
+      const response = await submitGetRequest({ url }, header)
+      expect(response.request.yar.get('upload-id')).toBeDefined()
+    })
+
     // it('should set upload-id if not present', async () => {
     //   const response = await submitGetRequest({ url }, header)
     //   expect(response.request.yar.get('upload-id')).toBeDefined()
@@ -268,6 +278,16 @@ describe(baseUrl, () => {
       it('should return correct error message if file missing original filename', async () => {
         const form = createForm('')
         form.append('fileUpload1', Buffer.from('data'), { filename: '' })
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 200)
+        expect(response.result).toContain('Select a file')
+      })
+
+      it('should return correct error message if file has filename but empty content', async () => {
+        const form = createForm('empty.png', Buffer.alloc(0), 'image/png')
         const response = await submitPostRequest({
           url,
           payload: form.getBuffer(),
