@@ -9,7 +9,7 @@ jest.mock('../../services/blob-storage.js', () => ({
 }))
 
 jest.mock('../../services/service-bus.js', () => ({
-  sendMessage: jest.fn().mockResolvedValue(undefined)
+  sendMessage: jest.fn()
 }))
 
 const url = constants.routes.SEND_PHOTOS
@@ -19,16 +19,14 @@ const generateThumbnails = (count) =>
   Array.from({ length: count }, (_, i) => ({
     finalFilename: `upload-id/photo${i + 1}.jpg`,
     thumbLoc: `/public/thumbnails/upload-id-photo${i + 1}-thumbnail.jpg`,
-    fileSizeBytes: 1024 * 1024 * (i + 1)
+    fileSizeBytes: (i + 1) * 1024 * 1024
   }))
 
 describe(url, () => {
   beforeEach(() => {
-    getUploadContainerClient.mockResolvedValue({
-      url: 'https://example.blob.core.windows.net/sir-media-uploads'
-    })
     jest.spyOn(imageChecker, 'validate').mockResolvedValue({ success: true, skipped: true })
-    sendMessage.mockClear()
+    getUploadContainerClient.mockResolvedValue({ url: 'https://storage-account/sir-media-uploads' })
+    sendMessage.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -112,7 +110,7 @@ describe(url, () => {
       expect(payload.mediaUpload.images).toHaveLength(2)
 
       expect(payload.mediaUpload.images[0]).toEqual(expect.objectContaining({
-        imageLink: expect.stringContaining(`/sir-media-uploads/${sirid}/photo1.jpg`),
+        imageLink: `https://storage-account/sir-media-uploads/${sirid}/photo1.jpg`,
         imageName: 'photo1.jpg',
         severityScores: 'Hate:0, SelfHarm:0, Sexual:1, Violence:2',
         metadata: expect.objectContaining({
@@ -122,7 +120,7 @@ describe(url, () => {
       }))
 
       expect(payload.mediaUpload.images[1]).toEqual(expect.objectContaining({
-        imageLink: expect.stringContaining(`/sir-media-uploads/${sirid}/photo2.jpg`),
+        imageLink: `https://storage-account/sir-media-uploads/${sirid}/photo2.jpg`,
         imageName: 'photo2.jpg',
         severityScores: 'Hate:4, SelfHarm:0, Sexual:0, Violence:0',
         metadata: expect.objectContaining({

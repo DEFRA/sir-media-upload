@@ -2,6 +2,7 @@ import imageChecker from '../image-checker.js'
 import * as blobStorage from '../blob-storage.js'
 import ContentSafetyClient, { isUnexpected } from '@azure-rest/ai-content-safety'
 import { AzureKeyCredential } from '@azure/core-auth'
+import config from '../../utils/config.js'
 
 jest.mock('../blob-storage.js', () => ({
   getUploadContainerClient: jest.fn()
@@ -46,8 +47,8 @@ describe('image-checker', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    process.env.CONTENT_SAFETY_ENDPOINT = 'https://example.cognitiveservices.azure.com/'
-    process.env.CONTENT_SAFETY_KEY = 'test-content-safety-key'
+    config.contentSafetyEndpoint = 'https://example.cognitiveservices.azure.com/'
+    config.contentSafetyKey = 'test-content-safety-key'
   })
 
   it.each([
@@ -140,8 +141,8 @@ describe('image-checker', () => {
       key: ''
     }
   ])('returns skipped result when content safety config is incomplete: $label', async ({ endpoint, key }) => {
-    process.env.CONTENT_SAFETY_ENDPOINT = endpoint
-    process.env.CONTENT_SAFETY_KEY = key
+    config.contentSafetyEndpoint = endpoint
+    config.contentSafetyKey = key
 
     const result = await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
 
@@ -160,8 +161,8 @@ describe('image-checker', () => {
       key: ''
     }
   ])('does not create content safety client when config is incomplete: $label', async ({ endpoint, key }) => {
-    process.env.CONTENT_SAFETY_ENDPOINT = endpoint
-    process.env.CONTENT_SAFETY_KEY = key
+    config.contentSafetyEndpoint = endpoint
+    config.contentSafetyKey = key
 
     await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
 
@@ -180,8 +181,8 @@ describe('image-checker', () => {
       key: ''
     }
   ])('does not fetch blob container when config is incomplete: $label', async ({ endpoint, key }) => {
-    process.env.CONTENT_SAFETY_ENDPOINT = endpoint
-    process.env.CONTENT_SAFETY_KEY = key
+    config.contentSafetyEndpoint = endpoint
+    config.contentSafetyKey = key
 
     await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
 

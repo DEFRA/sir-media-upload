@@ -256,6 +256,16 @@ describe(url, () => {
         }, 200)
         expect(response.result).toContain('Select a file')
       })
+
+      it('should return correct error message if file has filename but empty content', async () => {
+        const form = createForm('empty.png', Buffer.alloc(0), 'image/png')
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 200)
+        expect(response.result).toContain('Select a file')
+      })
     })
 
     it('should show max selected files content when 5 files already exist', async () => {

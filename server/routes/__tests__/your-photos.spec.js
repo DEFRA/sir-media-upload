@@ -132,9 +132,16 @@ describe(url, () => {
       expect(response.payload).not.toContain('Add a photo')
     })
 
-    it('should show Continue button', async () => {
-      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
+    it('should show Continue button when photos exist', async () => {
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
+        thumbnails: mockThumbnails
+      })
       expect(response.payload).toContain('Continue')
+    })
+
+    it('should not show Continue button when no photos exist', async () => {
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
+      expect(response.payload).not.toContain('href="/send-photos"')
     })
 
     it('should show Remove button for each photo', async () => {
