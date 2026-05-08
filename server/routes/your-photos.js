@@ -24,7 +24,7 @@ const handlers = {
       })),
       remainingPhotos,
       sirid,
-      backLinkHref: constants.routes.ADD_A_PHOTO
+      backLinkHref: `${constants.routes.ADD_A_PHOTO}?sirid=${sirid}`
     })
   },
 
