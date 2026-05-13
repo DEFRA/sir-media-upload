@@ -1,7 +1,7 @@
 import constants from '../utils/constants.js'
 import imageChecker from '../services/image-checker.js'
 import { getUploadContainerClient } from '../services/blob-storage.js'
-// import { sendMessage } from '../services/service-bus.js'
+import { sendMessage } from '../services/service-bus.js'
 import { hasValidSirId, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
 
 const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
