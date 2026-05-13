@@ -23,5 +23,10 @@ describe(url, () => {
       const response = await submitGetRequest({ url }, 'Thank you')
       expect(response.payload).toContain('Give feedback')
     })
+
+    it('Should hide back link when hideBackLink is true', async () => {
+      const response = await submitGetRequest({ url }, 'Thank you')
+      expect(response.payload).not.toContain('id="back-link"')
+    })
   })
 })
