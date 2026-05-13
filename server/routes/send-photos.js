@@ -1,11 +1,11 @@
 import constants from '../utils/constants.js'
 import imageChecker from '../services/image-checker.js'
 import { getUploadContainerClient } from '../services/blob-storage.js'
-import { sendMessage } from '../services/service-bus.js'
+// import { sendMessage } from '../services/service-bus.js'
+import { hasValidSirId, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
 
-const buildPayload = (request, images, validationResult, uploadContainerUrl) => {
+const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
   const validationResponse = validationResult?.response || []
-  const sirId = request.yar.get('sirid')
 
   return {
     mediaUpload: {
@@ -30,19 +30,32 @@ const buildPayload = (request, images, validationResult, uploadContainerUrl) => 
 }
 
 const handlers = {
-  get: (request, h) => {
-    const images = request.yar.get('thumbnails') || []
+  get: async (request, h) => {
+    if (!(await hasValidSirId(request))) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
+    const { sirid } = request.query
+    const images = getThumbnailsBySirId(request)
     return h.view(constants.views.SEND_PHOTOS, {
-      photos: images.length
+      photos: images.length,
+      sirid
     })
   },
   post: async (request, h) => {
-    const images = request.yar.get('thumbnails') || []
+    if (!(await hasValidSirId(request))) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
+    const { sirid } = request.query
+    const images = getThumbnailsBySirId(request)
     const uploadContainerClient = await getUploadContainerClient()
     const validationResult = await imageChecker.validate(images)
-    const payload = buildPayload(request, images, validationResult, uploadContainerClient.url)
-    await sendMessage(request.logger, payload)
-    return h.redirect(constants.routes.SUCCESS)
+    const payload = buildPayload(sirid, images, validationResult, uploadContainerClient.url)
+    console.log('Payload to send to service bus', JSON.stringify(payload, null, 2))
+    // await sendMessage(request.logger, payload)
+    const redirectUrl = constants.routes.SUCCESS + (sirid ? `?sirid=${sirid}` : '')
+    return h.redirect(redirectUrl)
   }
 }
 

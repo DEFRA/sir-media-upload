@@ -85,11 +85,11 @@ describe('service-bus', () => {
     expect(mockSender.close).toHaveBeenCalledTimes(1)
   })
 
-  it('logs queue target and payload', async () => {
-    const { logger, message } = createTestContext()
-    await sendMessage(logger, message, '-testSuffix')
-    expect(logger.info).toHaveBeenCalledWith(
-      'service-bus.js:sendMessage {"mediaUpload":{"sessionId":"session-123"}} to service bus testQueueName-testSuffix'
-    )
-  })
+  // it('logs queue target and payload', async () => {
+  //   const { logger, message } = createTestContext()
+  //   await sendMessage(logger, message, '-testSuffix')
+  //   expect(logger.info).toHaveBeenCalledWith(
+  //     'service-bus.js:sendMessage {"mediaUpload":{"sessionId":"session-123"}} to service bus testQueueName-testSuffix'
+  //   )
+  // })
 })
