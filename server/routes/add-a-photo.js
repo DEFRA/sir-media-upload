@@ -6,6 +6,7 @@ import path from 'node:path'
 import dirname from '../../dirname.cjs'
 import crypto from 'node:crypto'
 import { getUploadContainerClient } from '../services/blob-storage.js'
+import { fileMalwareCheck } from '../services/file-malware-checker.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
@@ -201,6 +202,22 @@ async function handleFileUpload (request, uploadId) {
     .getBlockBlobClient(finalFilename)
     .uploadData(maxSizedBuffer)
 
+  try {
+    const blobClient = containerClient.getBlockBlobClient(finalFilename)
+    const tags = await blobClient.getTags()
+    fileMalwareCheck(tags)
+  } catch (malwareError) {
+    if (malwareError.code === 'MALWARE_DETECTED') {
+      const blobClient = containerClient.getBlockBlobClient(finalFilename)
+      await blobClient.delete()
+
+      const err = new Error('The uploaded file contains a virus or malware and cannot be accepted.')
+      err.code = 'MALWARE_DETECTED'
+      throw err
+    }
+    throw malwareError
+  }
+
   return {
     finalFilename,
     fileSizeBytes: maxSizedBuffer.length
@@ -261,6 +278,13 @@ const handlers = {
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file must be smaller than 4MB',
+            backLinkHref: constants.routes.YOUR_PHOTOS
+          })
+
+        case 'MALWARE_DETECTED':
+          return h.view(constants.views.ADD_A_PHOTO, {
+            maxSelectedFiles: false,
+            errorMessage: 'The uploaded file contains a virus or malware and cannot be accepted.',
             backLinkHref: constants.routes.YOUR_PHOTOS
           })
 

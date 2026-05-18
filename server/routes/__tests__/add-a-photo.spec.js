@@ -53,7 +53,8 @@ describe(url, () => {
     getUploadContainerClient.mockResolvedValue({
       getBlockBlobClient: () => ({
         uploadData: () => Promise.resolve(),
-        downloadToBuffer: () => Promise.resolve(mockValidPng)
+        downloadToBuffer: () => Promise.resolve(mockValidPng),
+        getTags: () => Promise.resolve({ 'Malware Scanning scan result': 'No threats found' })
       })
     })
   })
@@ -606,6 +607,52 @@ describe(url, () => {
         }, 302)
         const thumbnails = response.request.yar.get('thumbnails')
         expect(thumbnails[0].finalFilename).toContain('/upload')
+      })
+    })
+
+    describe('malware detection', () => {
+      it('should handle malware detection errors gracefully', async () => {
+        const form = createForm('malicious-file.png', mockValidPng)
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: jest.fn(() => ({
+            uploadData: jest.fn(),
+            getTags: jest.fn(() => Promise.resolve({ 'Malware Scanning scan result': 'Malicious' })),
+            delete: jest.fn()
+          }))
+        })
+
+        jest.spyOn(addPhoto, 'streamToBuffer').mockResolvedValue(mockValidPng)
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 200)
+
+        expect(response.result).toContain('The uploaded file contains a virus or malware and cannot be accepted.')
+      })
+
+      it('should handle threat screening errors gracefully', async () => {
+        const form = createForm('threat-file.png', mockValidPng)
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: jest.fn(() => ({
+            uploadData: jest.fn(),
+            getTags: jest.fn(() => Promise.resolve({})),
+            delete: jest.fn()
+          }))
+        })
+
+        jest.spyOn(addPhoto, 'streamToBuffer').mockResolvedValue(mockValidPng)
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 200)
+
+        expect(response.result).toContain('could not be uploaded')
       })
     })
   })

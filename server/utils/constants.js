@@ -47,11 +47,17 @@ const statusCodes = {
   SERVICE_UNAVAILABLE: 503
 }
 
+const uploadErrors = {
+  noFileScanResponse: 'No response from malware scanning service.',
+  threatDetected: 'The uploaded file contains a virus or malware and cannot be accepted.'
+}
+
 export default Object.freeze({
   routes,
   views,
   statusCodes,
-  urls
+  urls,
+  uploadErrors
   // serviceNames,
   // redisKeys,
   // errorSummary,
