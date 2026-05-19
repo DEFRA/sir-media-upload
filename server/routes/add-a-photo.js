@@ -4,9 +4,10 @@ import heicConvert from 'heic-convert'
 import fs from 'node:fs'
 import path from 'node:path'
 import dirname from '../../dirname.cjs'
-import crypto from 'node:crypto'
+// import crypto from 'node:crypto'
 import { getUploadContainerClient } from '../services/blob-storage.js'
 import { fileMalwareCheck } from '../services/file-malware-checker.js'
+import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
@@ -233,9 +234,9 @@ async function handleFileUpload (request, uploadId) {
 }
 
 const handlers = {
-  get: (request, h) => {
-    if (!request.yar.get('upload-id')) {
-      request.yar.set('upload-id', crypto.randomUUID())
+  get: async (request, h) => {
+    if (!(await hasValidSirId(request))) {
+      return h.redirect(constants.routes.LINK_USED)
     }
 
     return h.view(constants.views.ADD_A_PHOTO, {
@@ -245,8 +246,12 @@ const handlers = {
   },
 
   post: async (request, h) => {
-    const uploadId = request.yar.get('upload-id')
-    const thumbnails = request.yar.get('thumbnails') || []
+    if (!(await hasValidSirId(request))) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
+    const uploadId = request.query.sirid
+    const thumbnails = getThumbnailsBySirId(request)
 
     if (thumbnails.length >= MAX_SELECTED_FILES) {
       return h.view(constants.views.ADD_A_PHOTO, {
@@ -260,13 +265,12 @@ const handlers = {
       const fileLoc = await createThumbnail(finalFilename)
 
       const thumbLoc = `/public/thumbnails/${fileLoc}`
-      thumbnails.push({ finalFilename, thumbLoc, fileSizeBytes })
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, fileSizeBytes })
 
-      request.yar.set('thumbnails', thumbnails)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 
-      return h.redirect(constants.routes.YOUR_PHOTOS)
+      return h.redirect(redirectUrl)
     } catch (err) {
-      console.log('Upload error:', err)
       switch (err.code) {
         case 'NO_FILE':
           return h.view(constants.views.ADD_A_PHOTO, {

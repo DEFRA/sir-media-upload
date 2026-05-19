@@ -1,4 +1,5 @@
 import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/server.js'
+import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
 import imageChecker from '../../services/image-checker.js'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
@@ -12,7 +13,8 @@ jest.mock('../../services/service-bus.js', () => ({
   sendMessage: jest.fn()
 }))
 
-const url = constants.routes.SEND_PHOTOS
+const baseUrl = constants.routes.SEND_PHOTOS
+const url = `${baseUrl}?sirid=test-session-id`
 const header = 'Send photos'
 
 const generateThumbnails = (count) =>
@@ -22,10 +24,11 @@ const generateThumbnails = (count) =>
     fileSizeBytes: (i + 1) * 1024 * 1024
   }))
 
-describe(url, () => {
+describe(baseUrl, () => {
   beforeEach(() => {
     jest.spyOn(imageChecker, 'validate').mockResolvedValue({ success: true, skipped: true })
     getUploadContainerClient.mockResolvedValue({ url: 'https://storage-account/sir-media-uploads' })
+    getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
     sendMessage.mockResolvedValue(undefined)
   })
 
@@ -39,6 +42,11 @@ describe(url, () => {
       expect(response.payload).toContain('Send photos')
     })
 
+    it('should redirect to link-used when sirid is missing', async () => {
+      const response = await submitGetRequest({ url: baseUrl }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
     it('should render a send photos submit button', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('Send photos')
@@ -46,21 +54,26 @@ describe(url, () => {
 
     it.each([0, 1, 2, 3, 4, 5])('should display %i photos from the session', async (count) => {
       const thumbnails = generateThumbnails(count)
-      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, { thumbnails })
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(response.payload).toContain(`You have added ${count} out of a maximum of 5.`)
     })
   })
 
   describe('POST', () => {
+    it('should redirect to link-used when sirid is missing', async () => {
+      const response = await submitPostRequest({ url: baseUrl }, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
     it.each([0, 1, 2, 3, 4, 5])('should call image checker with %i thumbnails from the session', async (count) => {
       const thumbnails = generateThumbnails(count)
-      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { thumbnails })
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(imageChecker.validate).toHaveBeenCalledWith(thumbnails)
     })
 
     it('should redirect to success when no thumbnails exist in session', async () => {
       const response = await submitPostRequest({ url }, constants.statusCodes.REDIRECT)
-      expect(response.headers.location).toBe(constants.routes.SUCCESS)
+      expect(response.headers.location).toBe(`${constants.routes.SUCCESS}?sirid=test-session-id`)
     })
 
     it('should use sirid from session as sessionId in payload', async () => {
@@ -73,7 +86,8 @@ describe(url, () => {
         response: [{ severityScores: 'Hate:0, SelfHarm:0, Sexual:0, Violence:0' }]
       })
 
-      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { thumbnails, sirid })
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
+      await submitPostRequest({ url: `${baseUrl}?sirid=${sirid}` }, constants.statusCodes.REDIRECT, { 'existing-uploads': { [sirid]: { thumbnails } } })
 
       expect(sendMessage).toHaveBeenCalledTimes(1)
       const [, payload] = sendMessage.mock.calls[0]
@@ -97,7 +111,8 @@ describe(url, () => {
         ]
       })
 
-      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { thumbnails, sirid })
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
+      await submitPostRequest({ url: `${baseUrl}?sirid=${sirid}` }, constants.statusCodes.REDIRECT, { 'existing-uploads': { [sirid]: { thumbnails } } })
 
       expect(sendMessage).toHaveBeenCalledTimes(1)
       const [, payload] = sendMessage.mock.calls[0]

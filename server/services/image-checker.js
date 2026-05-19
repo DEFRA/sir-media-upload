@@ -34,6 +34,7 @@ const validateSingleImage = async (containerClient, finalFilename, contentSafety
   })
 
   if (isUnexpected(result)) {
+    console.log(result)
     throw new Error('Unexpected response from Azure Content Safety API')
   }
 

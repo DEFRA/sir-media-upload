@@ -13,11 +13,23 @@ const journeyCases = [
 ]
 
 describe(url, () => {
+  beforeEach(() => {
+    getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   describe('GET', () => {
     it(`Should return success response and correct view for ${url}`, async () => {
-      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue(null)
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('Upload photos')
+    })
+
+    it('should redirect to link-used when sirid is missing', async () => {
+      const response = await submitGetRequest({ url: constants.routes.UPLOAD_PHOTO }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
     it('should return OK when journey and dateTime are in cache', async () => {
@@ -44,27 +56,32 @@ describe(url, () => {
       expect(response.payload).toContain(returnFormattedDate(dateTime))
     })
 
-    it('should store sirid in session', async () => {
-      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue(null)
+    it('should initialize sirid in session', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
-      expect(response.request.yar.get('sirid')).toBe('test-session-id')
+      const existingUploads = response.request.yar.get('existing-uploads')
+      expect(existingUploads['test-session-id']).toBeDefined()
     })
 
     it('should call cache.get with the sirid from query', async () => {
-      const cacheGetSpy = jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue(null)
+      const cacheGetSpy = getServer().app.mediaUploadCache.get
       await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(cacheGetSpy).toHaveBeenCalledWith('test-session-id')
     })
   })
   describe('POST', () => {
     it(`Should return redirect response for ${constants.routes.UPLOAD_PHOTO}`, async () => {
-      const response = await submitPostRequest({ url: constants.routes.UPLOAD_PHOTO }, constants.statusCodes.REDIRECT)
+      const response = await submitPostRequest({ url }, constants.statusCodes.REDIRECT)
       expect(response.statusCode).toBe(constants.statusCodes.REDIRECT)
     })
 
-    it(`Should redirect to ${constants.routes.ADD_A_PHOTO} for ${constants.routes.UPLOAD_PHOTO}`, async () => {
+    it('should redirect to link-used when sirid is missing', async () => {
       const response = await submitPostRequest({ url: constants.routes.UPLOAD_PHOTO }, constants.statusCodes.REDIRECT)
-      expect(response.headers.location).toBe(constants.routes.ADD_A_PHOTO)
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it(`Should redirect to ${constants.routes.ADD_A_PHOTO} for ${constants.routes.UPLOAD_PHOTO}`, async () => {
+      const response = await submitPostRequest({ url }, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.ADD_A_PHOTO}?sirid=test-session-id`)
     })
   })
 })
