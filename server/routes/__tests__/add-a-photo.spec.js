@@ -662,7 +662,7 @@ describe(baseUrl, () => {
           headers: form.getHeaders()
         }, 200)
 
-        expect(response.result).toContain('The uploaded file contains a virus or malware and cannot be accepted.')
+        expect(response.result).toContain('The selected file contains a virus.')
       })
 
       it('should handle threat screening errors gracefully', async () => {

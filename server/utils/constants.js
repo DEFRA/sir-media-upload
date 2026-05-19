@@ -48,8 +48,8 @@ const statusCodes = {
 }
 
 const uploadErrors = {
-  noFileScanResponse: 'No response from malware scanning service.',
-  threatDetected: 'The uploaded file contains a virus or malware and cannot be accepted.'
+  noFileScanResponse: 'Timed out awaiting anti virus scan result.',
+  threatDetected: 'The selected file contains a virus.'
 }
 
 export default Object.freeze({

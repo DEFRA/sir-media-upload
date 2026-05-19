@@ -220,7 +220,7 @@ async function handleFileUpload (request, uploadId) {
       const blobClient = containerClient.getBlockBlobClient(finalFilename)
       await blobClient.delete()
 
-      const err = new Error('The uploaded file contains a virus or malware and cannot be accepted.')
+      const err = new Error('The selected file contains a virus.')
       err.code = 'MALWARE_DETECTED'
       throw err
     }
@@ -296,7 +296,7 @@ const handlers = {
         case 'MALWARE_DETECTED':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
-            errorMessage: 'The uploaded file contains a virus or malware and cannot be accepted.',
+            errorMessage: 'The selected file contains a virus',
             backLinkHref: constants.routes.YOUR_PHOTOS
           })
 
