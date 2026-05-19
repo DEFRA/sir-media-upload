@@ -1,25 +1,33 @@
 import constants from '../utils/constants.js'
 import { returnFormattedDate } from '../utils/date-helpers.js'
+import { addSirIdToSession, addSirIdToQueryString, hasValidSirId } from '../utils/upload-session-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
-    const { sirid } = request.query
+    if (!(await hasValidSirId(request))) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
+    const sirid = addSirIdToSession(request)
     const cachedData = await request.server.app.mediaUploadCache.get(sirid)
+
     const journey = cachedData?.journey
     const dateTime = cachedData?.dateTime
-    // const sirid = request.query.sirid || 'test-sirid'
-    // const cachedData = await request.server.app.mediaUploadCache.get(sirid)
-    // const journey = cachedData?.journey || 'test journey'
-    // const dateTime = cachedData?.dateTime || new Date().toISOString()
-
-    request.yar.set('sirid', sirid)
+    request.yar.set('journey', journey)
 
     return h.view(constants.views.UPLOAD_PHOTO, {
       journey,
       dateTime: returnFormattedDate(dateTime)
     })
   },
-  post: async (_request, h) => h.redirect(constants.routes.ADD_A_PHOTO)
+  post: async (request, h) => {
+    if (!(await hasValidSirId(request))) {
+      return h.redirect(constants.routes.LINK_USED)
+    }
+
+    const redirectUrl = addSirIdToQueryString(request, constants.routes.ADD_A_PHOTO)
+    return h.redirect(redirectUrl)
+  }
 }
 
 export default [
