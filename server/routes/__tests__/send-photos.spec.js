@@ -103,7 +103,7 @@ describe(baseUrl, () => {
         skipped: false,
         response: [
           {
-            severityScores: 'Hate:0, SelfHarm:0, Sexual:1, Violence:2'
+            severityScores: 'Hate:0, SelfHarm:0, Sexual:2, Violence:4'
           },
           {
             severityScores: 'Hate:4, SelfHarm:0, Sexual:0, Violence:0'
@@ -127,7 +127,7 @@ describe(baseUrl, () => {
       expect(payload.mediaUpload.images[0]).toEqual(expect.objectContaining({
         imageLink: `https://storage-account/sir-media-uploads/${sirid}/photo1.jpg`,
         imageName: 'photo1.jpg',
-        severityScores: 'Hate:0, SelfHarm:0, Sexual:1, Violence:2',
+        severityScores: 'Hate:0, SelfHarm:0, Sexual:2, Violence:4',
         metadata: expect.objectContaining({
           size: '1.00',
           fileType: 'jpg'

@@ -64,28 +64,28 @@ describe('image-checker', () => {
     },
     {
       label: 'sexual',
-      categoriesAnalysis: [{ category: 'sexual', severity: 1 }],
-      expectedLog: 'Content Safety severity scores for upload-id/photo1.jpg: sexual:1'
+      categoriesAnalysis: [{ category: 'sexual', severity: 0 }],
+      expectedLog: 'Content Safety severity scores for upload-id/photo1.jpg: sexual:0'
     },
     {
       label: 'violence',
-      categoriesAnalysis: [{ category: 'violence', severity: 3 }],
-      expectedLog: 'Content Safety severity scores for upload-id/photo1.jpg: violence:3'
+      categoriesAnalysis: [{ category: 'violence', severity: 4 }],
+      expectedLog: 'Content Safety severity scores for upload-id/photo1.jpg: violence:4'
     },
     {
       label: 'self harm',
-      categoriesAnalysis: [{ category: 'self harm', severity: 4 }],
-      expectedLog: 'Content Safety severity scores for upload-id/photo1.jpg: self harm:4'
+      categoriesAnalysis: [{ category: 'self harm', severity: 6 }],
+      expectedLog: 'Content Safety severity scores for upload-id/photo1.jpg: self harm:6'
     },
     {
       label: 'mixed categories',
       categoriesAnalysis: [
         { category: 'hate', severity: 2 },
-        { category: 'sexual', severity: 1 },
-        { category: 'violence', severity: 3 },
-        { category: 'self harm', severity: 4 }
+        { category: 'sexual', severity: 0 },
+        { category: 'violence', severity: 4 },
+        { category: 'self harm', severity: 6 }
       ],
-      expectedLog: 'Content Safety severity scores for upload-id/photo1.jpg: hate:2, sexual:1, violence:3, self harm:4'
+      expectedLog: 'Content Safety severity scores for upload-id/photo1.jpg: hate:2, sexual:0, violence:4, self harm:6'
     }
   ])('logs severity scores for $label', async ({ categoriesAnalysis, expectedLog }) => {
     const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
@@ -274,7 +274,80 @@ describe('image-checker', () => {
     expect(requestOptions.body.image.content).toBe(imageBuffer.toString('base64'))
   })
 
-  it('returns success when content safety post throws', async () => {
+  it('retries 3 times when content safety post throws', async () => {
+    const mockPost = jest.fn().mockRejectedValue(new Error('service unavailable'))
+    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
+    const downloadToBuffer = jest.fn().mockResolvedValue(Buffer.from('image-data'))
+    const getBlobClient = jest.fn().mockReturnValue({ downloadToBuffer })
+
+    ContentSafetyClient.mockReturnValue({ path: mockPath })
+    isUnexpected.mockReturnValue(false)
+    blobStorage.getUploadContainerClient.mockResolvedValue({ getBlobClient })
+
+    await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
+
+    expect(mockPost).toHaveBeenCalledTimes(3)
+  })
+
+  it('logs AIFail:8 when all retries are exhausted', async () => {
+    const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
+    const mockPost = jest.fn().mockRejectedValue(new Error('service unavailable'))
+    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
+    const downloadToBuffer = jest.fn().mockResolvedValue(Buffer.from('image-data'))
+    const getBlobClient = jest.fn().mockReturnValue({ downloadToBuffer })
+
+    ContentSafetyClient.mockReturnValue({ path: mockPath })
+    isUnexpected.mockReturnValue(false)
+    blobStorage.getUploadContainerClient.mockResolvedValue({ getBlobClient })
+
+    await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
+
+    expect(consoleSpy).toHaveBeenCalledWith('Content Safety severity scores for upload-id/photo1.jpg: AIFail:8')
+  })
+
+  it('succeeds on second attempt after initial failure', async () => {
+    const mockPost = jest.fn()
+      .mockRejectedValueOnce(new Error('service unavailable'))
+      .mockResolvedValueOnce({ body: { categoriesAnalysis: [{ category: 'hate', severity: 2 }] } })
+    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
+    const downloadToBuffer = jest.fn().mockResolvedValue(Buffer.from('image-data'))
+    const getBlobClient = jest.fn().mockReturnValue({ downloadToBuffer })
+
+    ContentSafetyClient.mockReturnValue({ path: mockPath })
+    isUnexpected.mockReturnValue(false)
+    blobStorage.getUploadContainerClient.mockResolvedValue({ getBlobClient })
+
+    const result = await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
+
+    expect(result.response[0]).toEqual(expect.objectContaining({
+      severityScores: 'hate:2'
+    }))
+    expect(mockPost).toHaveBeenCalledTimes(2)
+  })
+
+  it('retries when content safety returns unexpected response', async () => {
+    const mockPost = jest.fn()
+      .mockResolvedValueOnce({ body: { error: 'bad request' } })
+      .mockResolvedValueOnce({ body: { categoriesAnalysis: [{ category: 'sexual', severity: 2 }] } })
+    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
+    const downloadToBuffer = jest.fn().mockResolvedValue(Buffer.from('image-data'))
+    const getBlobClient = jest.fn().mockReturnValue({ downloadToBuffer })
+
+    ContentSafetyClient.mockReturnValue({ path: mockPath })
+    isUnexpected
+      .mockReturnValueOnce(true)
+      .mockReturnValueOnce(false)
+    blobStorage.getUploadContainerClient.mockResolvedValue({ getBlobClient })
+
+    const result = await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
+
+    expect(result.response[0]).toEqual(expect.objectContaining({
+      severityScores: 'sexual:2'
+    }))
+    expect(mockPost).toHaveBeenCalledTimes(2)
+  })
+
+  it('returns success when content safety post throws after retry exhaustion', async () => {
     const mockPost = jest.fn().mockRejectedValue(new Error('service unavailable'))
     const mockPath = jest.fn().mockReturnValue({ post: mockPost })
     const downloadToBuffer = jest.fn().mockResolvedValue(Buffer.from('image-data'))
@@ -286,21 +359,31 @@ describe('image-checker', () => {
 
     const result = await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
 
-    expect(result).toEqual({ success: true, skipped: false })
+    expect(result).toEqual({ success: true, skipped: false, response: expect.any(Array) })
   })
 
-  it('returns success when content safety returns unexpected response', async () => {
-    const mockPost = jest.fn().mockResolvedValue({ body: { error: 'bad request' } })
+  it('handles multiple thumbnails with mixed success and failure', async () => {
+    const mockPost = jest.fn()
+      .mockResolvedValueOnce({ body: { categoriesAnalysis: [{ category: 'hate', severity: 2 }] } })
+      .mockRejectedValue(new Error('service unavailable'))
     const mockPath = jest.fn().mockReturnValue({ post: mockPost })
     const downloadToBuffer = jest.fn().mockResolvedValue(Buffer.from('image-data'))
     const getBlobClient = jest.fn().mockReturnValue({ downloadToBuffer })
 
     ContentSafetyClient.mockReturnValue({ path: mockPath })
-    isUnexpected.mockReturnValue(true)
+    isUnexpected.mockReturnValue(false)
     blobStorage.getUploadContainerClient.mockResolvedValue({ getBlobClient })
 
-    const result = await imageChecker.validate([{ finalFilename: 'upload-id/photo1.jpg' }])
+    const result = await imageChecker.validate([
+      { finalFilename: 'upload-id/photo1.jpg' },
+      { finalFilename: 'upload-id/photo2.jpg' }
+    ])
 
-    expect(result).toEqual({ success: true, skipped: false })
+    expect(result.response[0]).toEqual(expect.objectContaining({
+      severityScores: 'hate:2'
+    }))
+    expect(result.response[1]).toEqual(expect.objectContaining({
+      severityScores: 'AIFail:8'
+    }))
   })
 })
