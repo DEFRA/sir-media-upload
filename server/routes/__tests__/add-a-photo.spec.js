@@ -55,7 +55,8 @@ describe(baseUrl, () => {
     getUploadContainerClient.mockResolvedValue({
       getBlockBlobClient: () => ({
         uploadData: () => Promise.resolve(),
-        downloadToBuffer: () => Promise.resolve(mockValidPng)
+        downloadToBuffer: () => Promise.resolve(mockValidPng),
+        getTags: () => Promise.resolve({ tags: { 'Malware Scanning scan result': 'No threats found' } })
       })
     })
     getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
@@ -636,6 +637,52 @@ describe(baseUrl, () => {
         const existingUploads = response.request.yar.get('existing-uploads')
         const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails[0].finalFilename).toContain('/upload')
+      })
+    })
+
+    describe('malware detection', () => {
+      beforeEach(() => {
+        jest.spyOn(addPhoto, 'streamToBuffer').mockResolvedValue(mockValidPng)
+      })
+
+      it('should handle malware detection errors gracefully', async () => {
+        const form = createForm('malicious-file.png', mockValidPng)
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: jest.fn(() => ({
+            uploadData: jest.fn(),
+            getTags: jest.fn(() => Promise.resolve({ tags: { 'Malware Scanning scan result': 'Malicious' } })),
+            delete: jest.fn()
+          }))
+        })
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 200)
+
+        expect(response.result).toContain('The selected file contains a virus.')
+      })
+
+      it('should handle threat screening errors gracefully', async () => {
+        const form = createForm('threat-file.png', mockValidPng)
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: jest.fn(() => ({
+            uploadData: jest.fn(),
+            getTags: jest.fn(() => Promise.resolve({ tags: { 'Malware Scanning scan result': 'Unknown result' } })),
+            delete: jest.fn()
+          }))
+        })
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 200)
+
+        expect(response.result).toContain('could not be uploaded')
       })
     })
   })

@@ -6,6 +6,7 @@ import path from 'node:path'
 import dirname from '../../dirname.cjs'
 // import crypto from 'node:crypto'
 import { getUploadContainerClient } from '../services/blob-storage.js'
+import { fileMalwareCheck } from '../services/file-malware-checker.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
@@ -23,6 +24,15 @@ export function streamToBuffer (stream) {
     stream.on('end', () => resolve(Buffer.concat(chunks)))
     stream.on('error', reject)
   })
+}
+
+const TAG_NAME = 'Malware Scanning scan result'
+
+export async function pollForScanTag (blobClient, attempts = 0) {
+  const { tags } = await blobClient.getTags()
+  if (tags[TAG_NAME] || attempts >= 9) return tags
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  return pollForScanTag(blobClient, attempts + 1)
 }
 
 async function createThumbnail (filename) {
@@ -202,6 +212,21 @@ async function handleFileUpload (request, uploadId) {
     .getBlockBlobClient(finalFilename)
     .uploadData(maxSizedBuffer)
 
+  try {
+    const blobClient = containerClient.getBlockBlobClient(finalFilename)
+    fileMalwareCheck(await pollForScanTag(blobClient))
+  } catch (malwareError) {
+    if (malwareError.code === 'MALWARE_DETECTED') {
+      const blobClient = containerClient.getBlockBlobClient(finalFilename)
+      await blobClient.delete()
+
+      const err = new Error('The selected file contains a virus.')
+      err.code = 'MALWARE_DETECTED'
+      throw err
+    }
+    throw malwareError
+  }
+
   return {
     finalFilename,
     fileSizeBytes: maxSizedBuffer.length
@@ -265,6 +290,13 @@ const handlers = {
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file must be smaller than 4MB',
+            backLinkHref: constants.routes.YOUR_PHOTOS
+          })
+
+        case 'MALWARE_DETECTED':
+          return h.view(constants.views.ADD_A_PHOTO, {
+            maxSelectedFiles: false,
+            errorMessage: 'The selected file contains a virus',
             backLinkHref: constants.routes.YOUR_PHOTOS
           })
 
