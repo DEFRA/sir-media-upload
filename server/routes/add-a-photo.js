@@ -25,6 +25,15 @@ export function streamToBuffer (stream) {
   })
 }
 
+const TAG_NAME = 'Malware Scanning scan result'
+
+export async function pollForScanTag (blobClient, attempts = 0) {
+  const { tags } = await blobClient.getTags()
+  if (tags[TAG_NAME] || attempts >= 9) return tags
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  return pollForScanTag(blobClient, attempts + 1)
+}
+
 async function createThumbnail (filename) {
   try {
     const containerClient = await getUploadContainerClient()
@@ -204,8 +213,7 @@ async function handleFileUpload (request, uploadId) {
 
   try {
     const blobClient = containerClient.getBlockBlobClient(finalFilename)
-    const tags = await blobClient.getTags()
-    fileMalwareCheck(tags)
+    fileMalwareCheck(await pollForScanTag(blobClient))
   } catch (malwareError) {
     if (malwareError.code === 'MALWARE_DETECTED') {
       const blobClient = containerClient.getBlockBlobClient(finalFilename)
