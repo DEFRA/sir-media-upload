@@ -29,7 +29,7 @@ const handlers = {
     removeSirIdFromSession(request)
     await request.server.app.mediaUploadCache.drop(sirid)
 
-    return h.view(constants.views.SUCCESS)
+    return h.view(constants.views.SUCCESS, { hideBackLink: true })
   }
 }
 
