@@ -28,46 +28,16 @@ export function streamToBuffer (stream) {
 
 const TAG_NAME = 'Malware Scanning scan result'
 
-export async function pollForScanTag (blobClient, attempts = 0) {
-  const { tags } = await blobClient.getTags()
-  if (tags[TAG_NAME] || attempts >= 9) return tags
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  return pollForScanTag(blobClient, attempts + 1)
-}
-
-async function createThumbnail (filename) {
+export async function pollForScanTag (containerClient, filePath, attempts = 0) {
+  const blobClient = containerClient.getBlockBlobClient(filePath)
   try {
-    const containerClient = await getUploadContainerClient()
-    const blobClient = containerClient.getBlockBlobClient(filename)
-    const imgBuf = await blobClient.downloadToBuffer()
-    const thumbnail = await sharp(imgBuf)
-      .resize({ width: 200 })
-      .toBuffer()
-    const [folder, file] = filename.split('/')
-    const [name, ext] = file.split('.')
-
-    const thumbName = `${name}-thumbnail.${ext}`
-    const thumbBlobClient = containerClient.getBlockBlobClient(`${folder}/${thumbName}`)
-    await thumbBlobClient.uploadData(thumbnail)
-
-    const localUploadLocation = `${folder}-${thumbName}`
-
-    const thumbDir = path.join(dirname, 'server/public/build/thumbnails')
-    if (!fs.existsSync(thumbDir)) {
-      fs.mkdirSync(thumbDir, { recursive: true })
-    }
-
-    fs.writeFileSync(
-      path.join(thumbDir, localUploadLocation),
-      thumbnail
-    )
-
-    return localUploadLocation
+    const { tags } = await blobClient.getTags()
+    if (tags[TAG_NAME] || attempts >= 9) return tags
   } catch (err) {
-    const newErr = new Error('Unexpected upload failure', { cause: err })
-    newErr.code = 'UPLOAD_FAILED'
-    throw newErr
+    if (attempts >= 9) throw err
   }
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  return pollForScanTag(containerClient, filePath, attempts + 1)
 }
 
 export async function convertImageType (fileBuffer, file) {
@@ -179,6 +149,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
 }
 
 async function handleFileUpload (request, uploadId) {
+  // 1. Check file exists
   const file = request.payload.fileUpload1
 
   if (!file) {
@@ -201,35 +172,67 @@ async function handleFileUpload (request, uploadId) {
     throw err
   }
 
-  const { buffer: uploadBuffer, extension } = await convertImageType(fileBuffer, file)
-  const { buffer: maxSizedBuffer, extension: maxSizedExtension } = await convertImageSize(uploadBuffer, extension)
-
-  const originalName = path.parse(file.hapi.filename).name || 'upload'
-  const finalFilename = `${uploadId}/${originalName}${maxSizedExtension}`
   const containerClient = await getUploadContainerClient()
+  const originalName = path.parse(file.hapi.filename).name || 'upload'
+  const originalExt = path.extname(file.hapi.filename).toLowerCase()
 
-  await containerClient
-    .getBlockBlobClient(finalFilename)
-    .uploadData(maxSizedBuffer)
+  // 2. Malware check: upload to quarantine first, Azure scans via tags, then process if clean
+  const scanFilePath = `quarantine/${uploadId}/.scan-${Date.now()}${originalExt}`
+  const scanBlobClient = containerClient.getBlockBlobClient(scanFilePath)
+  await scanBlobClient.uploadData(fileBuffer)
 
   try {
-    const blobClient = containerClient.getBlockBlobClient(finalFilename)
-    fileMalwareCheck(await pollForScanTag(blobClient))
+    fileMalwareCheck(await pollForScanTag(containerClient, scanFilePath))
+    // Delete the temp scan file after passing scan
+    await scanBlobClient.delete()
   } catch (malwareError) {
     if (malwareError.code === 'MALWARE_DETECTED') {
-      const blobClient = containerClient.getBlockBlobClient(finalFilename)
-      await blobClient.delete()
-
-      const err = new Error('The selected file contains a virus.')
+      const err = new Error('The selected file contains a virus')
       err.code = 'MALWARE_DETECTED'
       throw err
     }
     throw malwareError
   }
 
+  // 3. Convert image type
+  const { buffer: convertedBuffer, extension } = await convertImageType(fileBuffer, file)
+
+  // 4. Check 4MB size and store in session if needed
+  const aiCheckerImage = convertedBuffer.length > UPLOAD_MAX_BYTES
+    ? (await convertImageSize(convertedBuffer, extension)).buffer.toString('base64')
+    : null
+
+  // 5. Create thumbnail from converted image
+  const thumbnail = await sharp(convertedBuffer)
+    .resize({ width: 200 })
+    .toBuffer()
+
+  const finalFilename = `quarantine/${uploadId}/${originalName}${extension}`
+  const thumbnailBlobPath = `quarantine/${uploadId}/${originalName}-thumbnail${extension}`
+
+  // 6. Upload converted image and thumbnail to same container/folder
+  await containerClient
+    .getBlockBlobClient(finalFilename)
+    .uploadData(convertedBuffer)
+
+  await containerClient
+    .getBlockBlobClient(thumbnailBlobPath)
+    .uploadData(thumbnail)
+
+  // Save local thumbnail file
+  const localFilename = `${originalName}-thumbnail${extension}`
+  const thumbDir = path.join(dirname, 'server/public/build/thumbnails')
+  if (!fs.existsSync(thumbDir)) {
+    fs.mkdirSync(thumbDir, { recursive: true })
+  }
+  fs.writeFileSync(path.join(thumbDir, localFilename), thumbnail)
+
   return {
     finalFilename,
-    fileSizeBytes: maxSizedBuffer.length
+    fileSizeBytes: convertedBuffer.length,
+    aiCheckerImage,
+    thumbnailBlobPath,
+    localThumbnailPath: localFilename
   }
 }
 
@@ -261,11 +264,9 @@ const handlers = {
     }
 
     try {
-      const { finalFilename, fileSizeBytes } = await handleFileUpload(request, uploadId)
-      const fileLoc = await createThumbnail(finalFilename)
-
-      const thumbLoc = `/public/thumbnails/${fileLoc}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, fileSizeBytes })
+      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localThumbnailPath } = await handleFileUpload(request, uploadId)
+      const thumbLoc = `/public/thumbnails/${localThumbnailPath}`
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 

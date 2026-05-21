@@ -56,7 +56,8 @@ describe(baseUrl, () => {
       getBlockBlobClient: () => ({
         uploadData: () => Promise.resolve(),
         downloadToBuffer: () => Promise.resolve(mockValidPng),
-        getTags: () => Promise.resolve({ tags: { 'Malware Scanning scan result': 'No threats found' } })
+        getTags: () => Promise.resolve({ tags: { 'Malware Scanning scan result': 'No threats found' } }),
+        delete: () => Promise.resolve()
       })
     })
     getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
@@ -662,7 +663,7 @@ describe(baseUrl, () => {
           headers: form.getHeaders()
         }, 200)
 
-        expect(response.result).toContain('The selected file contains a virus.')
+        expect(response.result).toContain('The selected file contains a virus')
       })
 
       it('should handle threat screening errors gracefully', async () => {
@@ -684,6 +685,74 @@ describe(baseUrl, () => {
 
         expect(response.result).toContain('could not be uploaded')
       })
+
+      it('should retry malware scan tag polling when initially unavailable', async () => {
+        const form = createForm('malicious-file.png', mockValidPng)
+        const mockBlobClient = {
+          uploadData: jest.fn(),
+          getTags: jest.fn()
+            .mockRejectedValueOnce(new Error('tag not ready'))
+            .mockResolvedValueOnce({ tags: { 'Malware Scanning scan result': 'No threats found' } }),
+          delete: jest.fn()
+        }
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: jest.fn(() => mockBlobClient)
+        })
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+
+        expect(response.headers.location).toContain(constants.routes.YOUR_PHOTOS)
+      })
+
+      it('should retry polling when tag is not yet present', async () => {
+        const form = createForm('malicious-file.png', mockValidPng)
+        const mockBlobClient = {
+          uploadData: jest.fn(),
+          getTags: jest.fn()
+            .mockResolvedValueOnce({ tags: {} })
+            .mockResolvedValueOnce({ tags: { 'Malware Scanning scan result': 'No threats found' } }),
+          delete: jest.fn()
+        }
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: jest.fn(() => mockBlobClient)
+        })
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+
+        expect(response.headers.location).toContain(constants.routes.YOUR_PHOTOS)
+      })
+
+      it('should throw error after max polling attempts exhausted', async () => {
+        const form = createForm('malicious-file.png', mockValidPng)
+        const getTags = jest.fn().mockRejectedValue(new Error('service error'))
+        const mockBlobClient = {
+          uploadData: jest.fn(),
+          getTags,
+          delete: jest.fn()
+        }
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: jest.fn(() => mockBlobClient)
+        })
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 200)
+
+        expect(response.result).toContain('could not be uploaded')
+      }, 30000)
     })
   })
 })

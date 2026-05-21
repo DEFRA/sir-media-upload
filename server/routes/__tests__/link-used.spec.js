@@ -26,11 +26,11 @@ describe(url, () => {
       expect(response.payload).toContain('We have received your photos')
     })
 
-    it('should display journey from session when provided', async () => {
+    it('should not display journey text even when journey data is present', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
         journey: 'water pollution'
       })
-      expect(response.payload).toContain('You have already uploaded photos to support your report of water pollution')
+      expect(response.payload).not.toContain('support your report of water pollution')
     })
 
     it('should not show journey text when no journey is provided', async () => {
@@ -38,8 +38,8 @@ describe(url, () => {
       expect(response.payload).not.toContain('support your report of ')
     })
 
-    it(`Should pass feedback link to view for ${url}`, async () => {
-      const baseUrl = 'https://sir.example.gov.uk'
+    it(`Should render view without feedback context for ${url}`, async () => {
+      const baseUrl = 'https://sir-base-url.gov.uk'
       process.env.SMART_INCIDENT_REPORTING_BASE_URL = baseUrl
 
       const view = jest.fn()
@@ -59,10 +59,7 @@ describe(url, () => {
 
       await linkUsedRoute[0].handler(request, { view })
 
-      expect(view).toHaveBeenCalledWith(constants.views.LINK_USED, {
-        feedback: `${baseUrl}/feedback`,
-        journey: ''
-      })
+      expect(view).toHaveBeenCalledWith(constants.views.LINK_USED)
     })
   })
 })

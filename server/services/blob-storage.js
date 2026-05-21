@@ -3,27 +3,22 @@ import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-bl
 import config from '../utils/config.js'
 
 const uploadContainerName = 'sir-media-uploads'
+const thumbnailContainerName = 'sir-media-uploads-thumbnails'
+
+const createBlobServiceClient = () => {
+  if (config.storageAccessKey) {
+    const sharedKeyCredential = new StorageSharedKeyCredential(config.storageAccount, config.storageAccessKey)
+    return new BlobServiceClient(config.blobServiceUrl, sharedKeyCredential)
+  }
+  return new BlobServiceClient(config.blobServiceUrl, new DefaultAzureCredential())
+}
 
 const getUploadContainerClient = async () => {
   if (getUploadContainerClient.cachedClient) {
     return getUploadContainerClient.cachedClient
   }
 
-  let blobServiceClient
-
-  if (config.storageAccessKey) {
-    const sharedKeyCredential = new StorageSharedKeyCredential(config.storageAccount, config.storageAccessKey)
-    blobServiceClient = new BlobServiceClient(
-      config.blobServiceUrl,
-      sharedKeyCredential
-    )
-  } else {
-    blobServiceClient = new BlobServiceClient(
-      config.blobServiceUrl,
-      new DefaultAzureCredential()
-    )
-  }
-
+  const blobServiceClient = createBlobServiceClient()
   const containerClient = blobServiceClient.getContainerClient(uploadContainerName)
   await containerClient.createIfNotExists()
   getUploadContainerClient.cachedClient = containerClient
@@ -31,6 +26,36 @@ const getUploadContainerClient = async () => {
   return containerClient
 }
 
+const getThumbnailContainerClient = async () => {
+  if (getThumbnailContainerClient.cachedClient) {
+    return getThumbnailContainerClient.cachedClient
+  }
+
+  const blobServiceClient = createBlobServiceClient()
+  const containerClient = blobServiceClient.getContainerClient(thumbnailContainerName)
+  await containerClient.createIfNotExists()
+  getThumbnailContainerClient.cachedClient = containerClient
+
+  return containerClient
+}
+
+const moveBlobToFolder = async (containerClient, sourcePath, destFolder) => {
+  const pathParts = sourcePath.split('/')
+  pathParts[0] = destFolder
+  const destPath = pathParts.join('/')
+
+  const sourceBlob = containerClient.getBlockBlobClient(sourcePath)
+  const destBlob = containerClient.getBlockBlobClient(destPath)
+
+  const copyPoller = await destBlob.beginCopyFromURL(sourceBlob.url)
+  await copyPoller.pollUntilDone()
+  await sourceBlob.deleteIfExists()
+
+  return destPath
+}
+
 export {
-  getUploadContainerClient
+  getUploadContainerClient,
+  getThumbnailContainerClient,
+  moveBlobToFolder
 }

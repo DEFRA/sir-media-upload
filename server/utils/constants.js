@@ -48,8 +48,8 @@ const statusCodes = {
 }
 
 const uploadErrors = {
-  noFileScanResponse: 'Timed out awaiting anti virus scan result.',
-  threatDetected: 'The selected file contains a virus.'
+  noFileScanResponse: 'Timed out awaiting anti virus scan result',
+  threatDetected: 'The selected file contains a virus'
 }
 
 export default Object.freeze({
