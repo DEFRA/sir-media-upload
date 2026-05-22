@@ -1,16 +1,12 @@
-import { DefaultAzureCredential } from '@azure/identity'
-import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob'
+import { ManagedIdentityCredential } from '@azure/identity'
+import { BlobServiceClient } from '@azure/storage-blob'
 import config from '../utils/config.js'
 
 const uploadContainerName = 'sir-media-uploads'
 const thumbnailContainerName = 'sir-media-uploads-thumbnails'
 
 const createBlobServiceClient = () => {
-  if (config.storageAccessKey) {
-    const sharedKeyCredential = new StorageSharedKeyCredential(config.storageAccount, config.storageAccessKey)
-    return new BlobServiceClient(config.blobServiceUrl, sharedKeyCredential)
-  }
-  return new BlobServiceClient(config.blobServiceUrl, new DefaultAzureCredential())
+  return new BlobServiceClient(config.blobServiceUrl, new ManagedIdentityCredential())
 }
 
 const getUploadContainerClient = async () => {

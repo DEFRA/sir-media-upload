@@ -1,22 +1,18 @@
-import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob'
-import { DefaultAzureCredential } from '@azure/identity'
+import { BlobServiceClient } from '@azure/storage-blob'
+import { ManagedIdentityCredential } from '@azure/identity'
 import { getUploadContainerClient, getThumbnailContainerClient, moveBlobToFolder } from '../blob-storage.js'
-import config from '../../utils/config.js'
 
 jest.mock('@azure/storage-blob', () => ({
-  BlobServiceClient: jest.fn(),
-  StorageSharedKeyCredential: jest.fn()
+  BlobServiceClient: jest.fn()
 }))
 
 jest.mock('@azure/identity', () => ({
-  DefaultAzureCredential: jest.fn()
+  ManagedIdentityCredential: jest.fn()
 }))
 
 describe('blob-storage', () => {
   const setupServiceClient = () => {
     process.env.AZURE_BLOB_SERVICE_URL = 'https://blob-storage-url'
-    process.env.AZURE_STORAGE_ACCOUNT = 'test-account'
-    process.env.AZURE_STORAGE_ACCESS_KEY = 'test-key'
 
     const createIfNotExists = jest.fn().mockResolvedValue(undefined)
     const uploadContainerClient = { createIfNotExists }
@@ -71,30 +67,17 @@ describe('blob-storage', () => {
     expect(createIfNotExists).toHaveBeenCalledTimes(1)
   })
 
-  it('uses shared key credential when storage key exists', async () => {
-    setupServiceClient()
-    await getUploadContainerClient()
-    expect(StorageSharedKeyCredential).toHaveBeenCalledWith(config.storageAccount, config.storageAccessKey)
-  })
-
-  it('uses DefaultAzureCredential when storage key is not configured', async () => {
-    const originalAccessKey = config.storageAccessKey
-    config.storageAccessKey = ''
-
+  it('uses ManagedIdentityCredential for storage auth', async () => {
     const createIfNotExists = jest.fn().mockResolvedValue(undefined)
     const uploadContainerClient = { createIfNotExists }
     const getContainerClient = jest.fn(() => uploadContainerClient)
 
     BlobServiceClient.mockImplementation(() => ({ getContainerClient }))
-    StorageSharedKeyCredential.mockClear()
 
     delete getUploadContainerClient.cachedClient
     await getUploadContainerClient()
 
-    expect(StorageSharedKeyCredential).not.toHaveBeenCalled()
-    expect(DefaultAzureCredential).toHaveBeenCalled()
-
-    config.storageAccessKey = originalAccessKey
+    expect(ManagedIdentityCredential).toHaveBeenCalled()
   })
 
   it('moves blob to destination folder path', async () => {
