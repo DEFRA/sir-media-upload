@@ -119,11 +119,11 @@ async function hasValidSirId (request) {
     return false
   }
 
-  const cachedData = await request.server.app.mediaUploadCache.get(sirid)
+  // const cachedData = await request.server.app.mediaUploadCache.get(sirid)
 
-  if (!cachedData) {
-    return false
-  }
+  // if (!cachedData) {
+  //   return false
+  // }
 
   return true
 }
