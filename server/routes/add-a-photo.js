@@ -150,6 +150,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
 
 async function handleFileUpload (request, uploadId) {
   // 1. Check file exists
+  console.log('[add-a-photo] handleFileUpload start', { uploadId })
   const file = request.payload.fileUpload1
 
   if (!file) {
@@ -165,6 +166,7 @@ async function handleFileUpload (request, uploadId) {
   }
 
   const fileBuffer = await streamToBuffer(file)
+  console.log('[add-a-photo] file stream buffered', { uploadId, bytes: fileBuffer.length, filename: file.hapi.filename })
 
   if (!fileBuffer.length) {
     const err = new Error('No file data provided')
@@ -175,14 +177,17 @@ async function handleFileUpload (request, uploadId) {
   const containerClient = await getUploadContainerClient()
   const originalName = path.parse(file.hapi.filename).name || 'upload'
   const originalExt = path.extname(file.hapi.filename).toLowerCase()
+  console.log('[add-a-photo] upload metadata ready', { uploadId, originalName, originalExt })
 
   // 2. Malware check: upload to quarantine first, Azure scans via tags, then process if clean
   const scanFilePath = `quarantine/${uploadId}/.scan-${Date.now()}${originalExt}`
   const scanBlobClient = containerClient.getBlockBlobClient(scanFilePath)
   await scanBlobClient.uploadData(fileBuffer)
+  console.log('[add-a-photo] uploaded file for malware scan', { uploadId, scanFilePath })
 
   try {
     fileMalwareCheck(await pollForScanTag(containerClient, scanFilePath))
+    console.log('[add-a-photo] malware scan passed', { uploadId, scanFilePath })
   } catch (malwareError) {
     const deleteResult = await scanBlobClient.deleteIfExists()
     console.log('Scan blob delete result:', { scanFilePath, succeeded: deleteResult.succeeded, errorCode: malwareError.code })
@@ -195,19 +200,23 @@ async function handleFileUpload (request, uploadId) {
   }
   // Delete the temp scan file after passing scan
   await scanBlobClient.deleteIfExists()
+  console.log('[add-a-photo] deleted temporary scan blob', { uploadId, scanFilePath })
 
   // 3. Convert image type
   const { buffer: convertedBuffer, extension } = await convertImageType(fileBuffer, file)
+  console.log('[add-a-photo] image type converted', { uploadId, extension, convertedBytes: convertedBuffer.length })
 
   // 4. Check 4MB size and store in session if needed
   const aiCheckerImage = convertedBuffer.length > UPLOAD_MAX_BYTES
     ? (await convertImageSize(convertedBuffer, extension)).buffer.toString('base64')
     : null
+  console.log('[add-a-photo] size check complete', { uploadId, generatedAiCheckerImage: Boolean(aiCheckerImage) })
 
   // 5. Create thumbnail from converted image
   const thumbnail = await sharp(convertedBuffer)
     .resize({ width: 200 })
     .toBuffer()
+  console.log('[add-a-photo] thumbnail created', { uploadId, thumbnailBytes: thumbnail.length })
 
   const finalFilename = `quarantine/${uploadId}/${originalName}${extension}`
   const thumbnailBlobPath = `quarantine/${uploadId}/${originalName}-thumbnail${extension}`
@@ -216,18 +225,22 @@ async function handleFileUpload (request, uploadId) {
   await containerClient
     .getBlockBlobClient(finalFilename)
     .uploadData(convertedBuffer)
+  console.log('[add-a-photo] uploaded main image blob', { uploadId, finalFilename })
 
   await containerClient
     .getBlockBlobClient(thumbnailBlobPath)
     .uploadData(thumbnail)
+  console.log('[add-a-photo] uploaded thumbnail blob', { uploadId, thumbnailBlobPath })
 
   // Save local thumbnail file
   const localFilename = `${originalName}-thumbnail${extension}`
   const thumbDir = path.join(dirname, 'server/public/build/thumbnails')
   if (!fs.existsSync(thumbDir)) {
     fs.mkdirSync(thumbDir, { recursive: true })
+    console.log('[add-a-photo] created local thumbnail directory', { thumbDir })
   }
   fs.writeFileSync(path.join(thumbDir, localFilename), thumbnail)
+  console.log('[add-a-photo] wrote local thumbnail file', { uploadId, localFilename })
 
   return {
     finalFilename,
@@ -252,13 +265,16 @@ const handlers = {
 
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
+      console.log('[add-a-photo] invalid SIR id on POST')
       return h.redirect(constants.routes.LINK_USED)
     }
 
     const uploadId = request.query.sirid
     const thumbnails = getThumbnailsBySirId(request)
+    console.log('[add-a-photo] POST started', { uploadId, existingThumbnails: thumbnails.length })
 
     if (thumbnails.length >= MAX_SELECTED_FILES) {
+      console.log('[add-a-photo] max selected files reached', { uploadId, existingThumbnails: thumbnails.length, max: MAX_SELECTED_FILES })
       return h.view(constants.views.ADD_A_PHOTO, {
         maxSelectedFiles: true,
         backLinkHref: constants.routes.YOUR_PHOTOS
@@ -269,11 +285,14 @@ const handlers = {
       const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localThumbnailPath } = await handleFileUpload(request, uploadId)
       const thumbLoc = `/public/thumbnails/${localThumbnailPath}`
       addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage })
+      console.log('[add-a-photo] thumbnail added to session', { uploadId, finalFilename, thumbnailBlobPath, fileSizeBytes, hasAiCheckerImage: Boolean(aiCheckerImage) })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
+      console.log('[add-a-photo] redirecting after success', { uploadId, redirectUrl })
 
       return h.redirect(redirectUrl)
     } catch (err) {
+      console.log('[add-a-photo] upload failed', { uploadId, errorCode: err.code, errorMessage: err.message })
       switch (err.code) {
         case 'NO_FILE':
           return h.view(constants.views.ADD_A_PHOTO, {
