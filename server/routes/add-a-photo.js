@@ -183,9 +183,9 @@ async function handleFileUpload (request, uploadId) {
 
   try {
     fileMalwareCheck(await pollForScanTag(containerClient, scanFilePath))
-    // Delete the temp scan file after passing scan
-    await scanBlobClient.delete()
   } catch (malwareError) {
+    const deleteResult = await scanBlobClient.deleteIfExists()
+    console.log('Scan blob delete result:', { scanFilePath, succeeded: deleteResult.succeeded, errorCode: malwareError.code })
     if (malwareError.code === 'MALWARE_DETECTED') {
       const err = new Error('The selected file contains a virus')
       err.code = 'MALWARE_DETECTED'
@@ -193,6 +193,8 @@ async function handleFileUpload (request, uploadId) {
     }
     throw malwareError
   }
+  // Delete the temp scan file after passing scan
+  await scanBlobClient.deleteIfExists()
 
   // 3. Convert image type
   const { buffer: convertedBuffer, extension } = await convertImageType(fileBuffer, file)
