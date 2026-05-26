@@ -13,6 +13,7 @@ const handlers = {
 
     const journey = cachedData?.journey
     const dateTime = cachedData?.dateTime
+    request.yar.set('journey', journey)
 
     return h.view(constants.views.UPLOAD_PHOTO, {
       journey,
