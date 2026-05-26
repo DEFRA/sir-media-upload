@@ -24,6 +24,8 @@ const schema = Joi.object().keys({
   serviceBusConnectionString: Joi.string().required(),
   serviceBusQueueName: Joi.string().required(),
   blobServiceUrl: Joi.string().required(),
+  storageAccount: Joi.string().optional(),
+  storageAccessKey: Joi.string().optional(),
   smartIncidentReportingBaseUrl: Joi.string().required(),
   contentSafetyEndpoint: Joi.string().required(),
   contentSafetyKey: Joi.string().required()
@@ -44,6 +46,8 @@ const config = {
   serviceBusConnectionString: process.env.SERVICE_BUS_CONNECTION_STRING,
   serviceBusQueueName: process.env.SERVICE_BUS_QUEUE_NAME,
   blobServiceUrl: process.env.AZURE_BLOB_SERVICE_URL,
+  storageAccount: process.env.AZURE_STORAGE_ACCOUNT,
+  storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
   smartIncidentReportingBaseUrl: process.env.SMART_INCIDENT_REPORTING_BASE_URL,
   contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
   contentSafetyKey: process.env.CONTENT_SAFETY_KEY

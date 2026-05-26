@@ -1,12 +1,39 @@
-import { ManagedIdentityCredential } from '@azure/identity'
-import { BlobServiceClient } from '@azure/storage-blob'
+import { DefaultAzureCredential } from '@azure/identity'
+import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob'
 import config from '../utils/config.js'
 
 const uploadContainerName = 'sir-media-uploads'
 const thumbnailContainerName = 'sir-media-uploads-thumbnails'
 
-const createBlobServiceClient = () => {
-  return new BlobServiceClient(config.blobServiceUrl, new ManagedIdentityCredential())
+const getBlobServiceClient = async () => {
+  if (getBlobServiceClient.cachedClient) {
+    return getBlobServiceClient.cachedClient
+  }
+
+  let blobServiceClient
+
+  if (config.storageAccessKey) {
+    const sharedKeyCredential = new StorageSharedKeyCredential(config.storageAccount, config.storageAccessKey)
+    blobServiceClient = new BlobServiceClient(
+      config.blobServiceUrl,
+      sharedKeyCredential
+    )
+  } else {
+    blobServiceClient = new BlobServiceClient(
+      config.blobServiceUrl,
+      new DefaultAzureCredential()
+    )
+  }
+
+  getBlobServiceClient.cachedClient = blobServiceClient
+  return blobServiceClient
+}
+
+const getContainerClientByName = async (containerName) => {
+  const blobServiceClient = await getBlobServiceClient()
+  const containerClient = blobServiceClient.getContainerClient(containerName)
+  await containerClient.createIfNotExists()
+  return containerClient
 }
 
 const getUploadContainerClient = async () => {
@@ -14,11 +41,8 @@ const getUploadContainerClient = async () => {
     return getUploadContainerClient.cachedClient
   }
 
-  const blobServiceClient = createBlobServiceClient()
-  const containerClient = blobServiceClient.getContainerClient(uploadContainerName)
-  await containerClient.createIfNotExists()
+  const containerClient = await getContainerClientByName(uploadContainerName)
   getUploadContainerClient.cachedClient = containerClient
-
   return containerClient
 }
 
@@ -27,11 +51,8 @@ const getThumbnailContainerClient = async () => {
     return getThumbnailContainerClient.cachedClient
   }
 
-  const blobServiceClient = createBlobServiceClient()
-  const containerClient = blobServiceClient.getContainerClient(thumbnailContainerName)
-  await containerClient.createIfNotExists()
+  const containerClient = await getContainerClientByName(thumbnailContainerName)
   getThumbnailContainerClient.cachedClient = containerClient
-
   return containerClient
 }
 
@@ -51,6 +72,7 @@ const moveBlobToFolder = async (containerClient, sourcePath, destFolder) => {
 }
 
 export {
+  getBlobServiceClient,
   getUploadContainerClient,
   getThumbnailContainerClient,
   moveBlobToFolder
