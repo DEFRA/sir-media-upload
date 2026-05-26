@@ -4,7 +4,7 @@ import HapiPino from 'hapi-pino'
 export default {
   plugin: HapiPino,
   options: {
-    logPayload: false,
+    logPayload: true,
     level: config.logLevel,
     redact: {
       paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers'],
