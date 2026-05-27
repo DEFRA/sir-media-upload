@@ -32,6 +32,11 @@ describe('upload-session-helpers', () => {
         app: {
           mediaUploadCache: {
             get: jest.fn().mockResolvedValue({ journey: 'test' })
+          },
+          mediaUploadLockCache: {
+            get: jest.fn().mockResolvedValue(null),
+            set: jest.fn().mockResolvedValue(undefined),
+            drop: jest.fn().mockResolvedValue(undefined)
           }
         }
       }
@@ -302,6 +307,33 @@ describe('upload-session-helpers', () => {
     it('should call cache.get with sirid', async () => {
       await hasValidSirId(mockRequest)
       expect(mockRequest.server.app.mediaUploadCache.get).toHaveBeenCalledWith('test-session-id')
+    })
+
+    it('should acquire a lock for the current session when no lock exists', async () => {
+      const result = await hasValidSirId(mockRequest)
+      expect(result).toBe(true)
+      expect(mockRequest.server.app.mediaUploadLockCache.set).toHaveBeenCalledWith(
+        'test-session-id',
+        expect.objectContaining({ userId: expect.any(String) })
+      )
+    })
+
+    it('should return false when lock belongs to a different session', async () => {
+      mockRequest.server.app.mediaUploadLockCache.get.mockResolvedValue({ userId: 'different-session' })
+      const result = await hasValidSirId(mockRequest)
+      expect(result).toBe(false)
+      expect(mockRequest.server.app.mediaUploadLockCache.set).not.toHaveBeenCalled()
+    })
+
+    it('should allow access when lock belongs to the same session', async () => {
+      mockRequest.yar.set('journey-lock-session-id', 'same-session')
+      mockRequest.server.app.mediaUploadLockCache.get.mockResolvedValue({ userId: 'same-session' })
+      const result = await hasValidSirId(mockRequest)
+      expect(result).toBe(true)
+      expect(mockRequest.server.app.mediaUploadLockCache.set).toHaveBeenCalledWith(
+        'test-session-id',
+        expect.objectContaining({ userId: 'same-session' })
+      )
     })
   })
 

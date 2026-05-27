@@ -11,6 +11,7 @@ import session from './plugins/session.js'
 // import onPostHandler from './plugins/on-post-handler.js'
 
 const expire = 72 * 60 * 60 * 1000
+const journeyLockExpire = 30 * 60 * 1000
 
 const createServer = async options => {
   // Create the hapi server
@@ -40,6 +41,11 @@ const init = async server => {
     cache: 'redis_cache',
     segment: 'media-upload',
     expiresIn: expire
+  })
+  server.app.mediaUploadLockCache = server.cache({
+    cache: 'redis_cache',
+    segment: 'media-upload-lock',
+    expiresIn: journeyLockExpire
   })
   await server.start()
 }

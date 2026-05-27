@@ -1,6 +1,22 @@
+import { randomUUID } from 'node:crypto'
+
+const JOURNEY_LOCK_SESSION_KEY = 'journey-lock-session-id'
+
 function getSirIdFromRequest (request) {
   const sirid = request.query.sirid || null
   return sirid
+}
+
+function getJourneyLockUserId (request, { createIfMissing = true } = {}) {
+  const existingUserId = request.yar.get(JOURNEY_LOCK_SESSION_KEY)
+
+  if (existingUserId || !createIfMissing) {
+    return existingUserId || null
+  }
+
+  const userId = randomUUID()
+  request.yar.set(JOURNEY_LOCK_SESSION_KEY, userId)
+  return userId
 }
 
 function getExistingUploads (request) {
@@ -124,6 +140,23 @@ async function hasValidSirId (request) {
   if (!cachedData) {
     return false
   }
+
+  const lockCache = request.server.app.mediaUploadLockCache
+  if (!lockCache) {
+    return true
+  }
+
+  const userId = getJourneyLockUserId(request)
+  const existingLock = await lockCache.get(sirid)
+
+  if (existingLock && existingLock.userId !== userId) {
+    return false
+  }
+
+  await lockCache.set(sirid, {
+    userId: userId,
+    updatedAt: new Date().toISOString()
+  })
 
   return true
 }
