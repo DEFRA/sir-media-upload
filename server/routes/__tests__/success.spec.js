@@ -44,7 +44,7 @@ describe(baseUrl, () => {
     })
 
     it('should log and continue when local thumbnail deletion throws', async () => {
-      const baseUrl = 'https://sir.example.gov.uk'
+      const baseUrl = 'https://sir-base-url.gov.uk'
       process.env.SMART_INCIDENT_REPORTING_BASE_URL = baseUrl
 
       const view = jest.fn()
