@@ -6,7 +6,7 @@ import {
   getSessionDetailsBySirId,
   getThumbnailsBySirId,
   addThumbnailBySirId,
-  removeThumbnailBySirIdAtIndex,
+  removeThumbnailFromSession,
   clearSessionDetailsBySirId,
   getSirIdFromRequest,
   getExistingUploads,
@@ -173,7 +173,7 @@ describe('upload-session-helpers', () => {
     })
   })
 
-  describe('removeThumbnailBySirIdAtIndex', () => {
+  describe('removeThumbnailFromSession', () => {
     it('should remove thumbnail at valid index', () => {
       const thumbnails = [
         { finalFilename: 'photo1.jpg' },
@@ -182,10 +182,11 @@ describe('upload-session-helpers', () => {
       mockRequest.yar.set('existing-uploads', {
         'test-session-id': { thumbnails }
       })
-      const { removed, thumbnails: updated } = removeThumbnailBySirIdAtIndex(mockRequest, 0)
+        const removed = removeThumbnailFromSession(mockRequest, 0)
       expect(removed).toEqual({ finalFilename: 'photo1.jpg' })
-      expect(updated.length).toBe(1)
-      expect(updated[0]).toEqual({ finalFilename: 'photo2.jpg' })
+        const updated = getThumbnailsBySirId(mockRequest)
+        expect(updated.length).toBe(1)
+        expect(updated[0]).toEqual({ finalFilename: 'photo2.jpg' })
     })
 
     it('should not remove thumbnail at invalid index', () => {
@@ -193,8 +194,9 @@ describe('upload-session-helpers', () => {
       mockRequest.yar.set('existing-uploads', {
         'test-session-id': { thumbnails }
       })
-      const { removed, thumbnails: updated } = removeThumbnailBySirIdAtIndex(mockRequest, 999)
+        const removed = removeThumbnailFromSession(mockRequest, 999)
       expect(removed).toBeNull()
+        const updated = getThumbnailsBySirId(mockRequest)
       expect(updated.length).toBe(1)
     })
 
@@ -203,7 +205,7 @@ describe('upload-session-helpers', () => {
       mockRequest.yar.set('existing-uploads', {
         'test-session-id': { thumbnails }
       })
-      const { removed } = removeThumbnailBySirIdAtIndex(mockRequest, -1)
+        const removed = removeThumbnailFromSession(mockRequest, -1)
       expect(removed).toBeNull()
     })
 
@@ -212,20 +214,18 @@ describe('upload-session-helpers', () => {
       mockRequest.yar.set('existing-uploads', {
         'test-session-id': { thumbnails }
       })
-      const { removed } = removeThumbnailBySirIdAtIndex(mockRequest, 'invalid')
+        const removed = removeThumbnailFromSession(mockRequest, 'invalid')
       expect(removed).toBeNull()
     })
 
     it('should return empty array when sirid missing', () => {
-      const { removed, thumbnails } = removeThumbnailBySirIdAtIndex(mockRequest, 0)
+        const removed = removeThumbnailFromSession(mockRequest, 0)
       expect(removed).toBeNull()
-      expect(thumbnails).toEqual([])
     })
 
     it('should return empty array when no sirid param', () => {
-      const { removed, thumbnails } = removeThumbnailBySirIdAtIndex(mockRequest, 0, null)
+        const removed = removeThumbnailFromSession(mockRequest, 0, null)
       expect(removed).toBeNull()
-      expect(thumbnails).toEqual([])
     })
   })
 
@@ -316,7 +316,7 @@ describe('upload-session-helpers', () => {
       uploads[sirB] = { thumbnails: [{ finalFilename: 'b.jpg' }] }
       mockRequest.yar.set('existing-uploads', uploads)
 
-      removeThumbnailBySirIdAtIndex(mockRequest, 0)
+      removeThumbnailFromSession(mockRequest, 0)
 
       const result = getExistingUploads(mockRequest)
       expect(result[sirA].thumbnails).toHaveLength(0)

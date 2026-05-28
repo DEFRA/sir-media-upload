@@ -24,7 +24,7 @@ const schema = Joi.object().keys({
   serviceBusConnectionString: Joi.string().required(),
   serviceBusQueueName: Joi.string().required(),
   blobServiceUrl: Joi.string().required(),
-  storageAccount: Joi.string().optional(),
+  storageAccount: Joi.string().required(),
   storageAccessKey: Joi.string().optional(),
   smartIncidentReportingBaseUrl: Joi.string().required(),
   contentSafetyEndpoint: Joi.string().required(),

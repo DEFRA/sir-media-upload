@@ -81,7 +81,7 @@ const validateSingleImage = async (containerClient, image, contentSafetyClient) 
 }
 
 const validateWithRetry = async (containerClient, image, contentSafetyClient, maxRetries = 3) => {
-  for (const attempt of Array.from({ length: maxRetries }, (_, index) => index + 1)) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       return await validateSingleImage(containerClient, image, contentSafetyClient)
     } catch (error) {

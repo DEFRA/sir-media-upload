@@ -232,6 +232,24 @@ describe(baseUrl, () => {
       expect(state.mockDeleteIfExists).toHaveBeenCalledTimes(2)
     })
 
+    it('should use thumbnailBlobPath when present for thumbnail deletion', async () => {
+      const thumbnails = [{
+        finalFilename: 'upload-id/photo1.png',
+        thumbnailBlobPath: 'thumbnails/upload-id/photo1-thumb.png',
+        thumbLoc: '/public/thumbnails/upload-id-0.png'
+      }]
+      const mockGetBlockBlobClient = jest.fn().mockReturnValue({ deleteIfExists: state.mockDeleteIfExists })
+      getUploadContainerClient.mockResolvedValue({ getBlockBlobClient: mockGetBlockBlobClient })
+
+      await submitPostRequest({
+        url,
+        payload: { imageIndex: '0' }
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+
+      expect(mockGetBlockBlobClient).toHaveBeenCalledWith('upload-id/photo1.png')
+      expect(mockGetBlockBlobClient).toHaveBeenCalledWith('thumbnails/upload-id/photo1-thumb.png')
+    })
+
     it('should delete local thumbnail file', async () => {
       await submitPostRequest({
         url,

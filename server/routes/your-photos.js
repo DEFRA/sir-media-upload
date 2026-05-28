@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import dirname from '../../dirname.cjs'
 import { getUploadContainerClient } from '../services/blob-storage.js'
-import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, removeThumbnailBySirIdAtIndex } from '../utils/upload-session-helpers.js'
+import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, removeThumbnailFromSession } from '../utils/upload-session-helpers.js'
 
 const MAX_PHOTOS = 5
 
@@ -34,7 +34,7 @@ const handlers = {
     }
 
     const imageIndex = Number.parseInt(request.payload.imageIndex, 10)
-    const { removed } = removeThumbnailBySirIdAtIndex(request, imageIndex)
+    const removed = removeThumbnailFromSession(request, imageIndex)
 
     if (removed) {
       try {
@@ -44,7 +44,7 @@ const handlers = {
         await containerClient.getBlockBlobClient(removed.finalFilename).deleteIfExists()
 
         // Delete the thumbnail from the thumbnails container
-        const thumbBlobPath = removed.thumbnailBlobPath || removed.finalFilename
+        const thumbBlobPath = removed.thumbnailBlobPath
         await containerClient.getBlockBlobClient(thumbBlobPath).deleteIfExists()
 
         // Delete local thumbnail file

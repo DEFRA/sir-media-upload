@@ -4,7 +4,6 @@ import config from '../../utils/config.js'
 import {
   getBlobServiceClient,
   getUploadContainerClient,
-  getThumbnailContainerClient,
   moveBlobToFolder
 } from '../blob-storage.js'
 
@@ -44,7 +43,6 @@ describe('blob-storage', () => {
   beforeEach(() => {
     delete getBlobServiceClient.cachedClient
     delete getUploadContainerClient.cachedClient
-    delete getThumbnailContainerClient.cachedClient
     jest.clearAllMocks()
     config.storageAccessKey = undefined
   })
@@ -126,40 +124,6 @@ describe('blob-storage', () => {
         await getUploadContainerClient()
 
         expect(BlobServiceClient).toHaveBeenCalledTimes(1)
-      })
-    })
-  })
-
-  describe('getThumbnailContainerClient', () => {
-    describe('when called for the first time', () => {
-      it('should return the thumbnail container client', async () => {
-        const { containerClient, blobServiceClient } = setupMocks()
-
-        const result = await getThumbnailContainerClient()
-
-        expect(blobServiceClient.getContainerClient).toHaveBeenCalledWith('sir-media-uploads-thumbnails')
-        expect(containerClient.createIfNotExists).toHaveBeenCalledTimes(1)
-        expect(result).toBe(containerClient)
-      })
-    })
-
-    describe('when called multiple times', () => {
-      it('should return the same cached container client', async () => {
-        setupMocks()
-
-        const firstResult = await getThumbnailContainerClient()
-        const secondResult = await getThumbnailContainerClient()
-
-        expect(firstResult).toBe(secondResult)
-      })
-
-      it('should only create the container once', async () => {
-        const { containerClient } = setupMocks()
-
-        await getThumbnailContainerClient()
-        await getThumbnailContainerClient()
-
-        expect(containerClient.createIfNotExists).toHaveBeenCalledTimes(1)
       })
     })
   })

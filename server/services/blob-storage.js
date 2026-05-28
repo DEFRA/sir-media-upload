@@ -3,7 +3,6 @@ import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-bl
 import config from '../utils/config.js'
 
 const uploadContainerName = 'sir-media-uploads'
-const thumbnailContainerName = 'sir-media-uploads-thumbnails'
 
 const getBlobServiceClient = async () => {
   if (getBlobServiceClient.cachedClient) {
@@ -46,16 +45,6 @@ const getUploadContainerClient = async () => {
   return containerClient
 }
 
-const getThumbnailContainerClient = async () => {
-  if (getThumbnailContainerClient.cachedClient) {
-    return getThumbnailContainerClient.cachedClient
-  }
-
-  const containerClient = await getContainerClientByName(thumbnailContainerName)
-  getThumbnailContainerClient.cachedClient = containerClient
-  return containerClient
-}
-
 const moveBlobToFolder = async (containerClient, sourcePath, destFolder) => {
   const pathParts = sourcePath.split('/')
   pathParts[0] = destFolder
@@ -74,6 +63,5 @@ const moveBlobToFolder = async (containerClient, sourcePath, destFolder) => {
 export {
   getBlobServiceClient,
   getUploadContainerClient,
-  getThumbnailContainerClient,
   moveBlobToFolder
 }
