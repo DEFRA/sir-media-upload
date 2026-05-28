@@ -67,6 +67,12 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
     it('should display correct header', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('<h1 class="govuk-heading-l">Your photos</h1>')
@@ -148,7 +154,7 @@ describe(baseUrl, () => {
 
     it('should show Continue button when photos exist', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
-        thumbnails: mockThumbnails
+        'existing-uploads': { 'test-session-id': { thumbnails: mockThumbnails } }
       })
       expect(response.payload).toContain('Continue')
     })
@@ -160,7 +166,7 @@ describe(baseUrl, () => {
 
     it('should render back link to add-a-photo instead of browser history', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
-      expect(response.payload).toContain(`href="${constants.routes.ADD_A_PHOTO}"`)
+      expect(response.payload).toContain('href="/add-a-photo?sirid=test-session-id"')
     })
 
     it('should show Remove button for each photo', async () => {
@@ -190,6 +196,16 @@ describe(baseUrl, () => {
       }, constants.statusCodes.REDIRECT)
 
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitPostRequest({
+        url,
+        payload: { imageIndex: '0' }
+      }, constants.statusCodes.REDIRECT)
+
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
     })
 
     it('should redirect to YOUR_PHOTOS after removing a photo', async () => {

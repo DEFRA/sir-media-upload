@@ -211,7 +211,8 @@ async function handleFileUpload (request, uploadId) {
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     return h.view(constants.views.ADD_A_PHOTO, {
@@ -222,7 +223,8 @@ const handlers = {
 
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     const uploadId = request.query.sirid

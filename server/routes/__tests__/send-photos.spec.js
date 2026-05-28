@@ -47,6 +47,12 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
     it('should render a send photos submit button', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('Send photos')
@@ -63,6 +69,12 @@ describe(baseUrl, () => {
     it('should redirect to link-used when sirid is missing', async () => {
       const response = await submitPostRequest({ url: baseUrl }, constants.statusCodes.REDIRECT)
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitPostRequest({ url }, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
     })
 
     it.each([0, 1, 2, 3, 4, 5])('should call image checker with %i thumbnails from the session', async (count) => {

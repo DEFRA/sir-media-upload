@@ -18,6 +18,12 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
     it(`Should return success response and correct view for ${baseUrl}`, async () => {
       await submitGetRequest({ url }, 'Thank you')
     })
@@ -34,35 +40,7 @@ describe(baseUrl, () => {
 
     it(`Should display feedback link for ${baseUrl}`, async () => {
       const response = await submitGetRequest({ url }, 'Thank you')
-      expect(response.payload).toContain('<a href="feedback">Give feedback</a>')
-    })
-
-    it(`Should pass feedback link to view for ${baseUrl}`, async () => {
-      const baseUrl = 'https://sir.example.gov.uk'
-      process.env.SMART_INCIDENT_REPORTING_BASE_URL = baseUrl
-
-      const view = jest.fn()
-      const mockRequest = {
-        query: { sirid: 'test-session-id' },
-        yar: {
-          get: jest.fn(),
-          set: jest.fn()
-        },
-        server: {
-          app: {
-            mediaUploadCache: {
-              get: jest.fn().mockResolvedValue({ journey: 'test' }),
-              drop: jest.fn()
-            }
-          }
-        }
-      }
-
-      await successRoute[0].handler(mockRequest, { view })
-
-      expect(view).toHaveBeenCalledWith(constants.views.SUCCESS, {
-        feedback: `${baseUrl}/feedback`
-      })
+      expect(response.payload).toContain('<a href="https://sir-base-url.gov.uk/feedback">Give feedback</a>')
     })
 
     it('should log and continue when local thumbnail deletion throws', async () => {

@@ -76,6 +76,12 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
     it('should render back link to your photos instead of browser history', async () => {
       const response = await submitGetRequest({ url }, header)
       expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}"`)
@@ -108,6 +114,18 @@ describe(baseUrl, () => {
       }, constants.statusCodes.REDIRECT)
 
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const form = createForm('valid.png', mockValidPng, 'image/png')
+      const response = await submitPostRequest({
+        url,
+        payload: form.getBuffer(),
+        headers: form.getHeaders()
+      }, constants.statusCodes.REDIRECT)
+
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
     })
 
     describe('file type', () => {
