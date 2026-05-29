@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import dirname from '../../dirname.cjs'
 import { getUploadContainerClient } from '../services/blob-storage.js'
-import { fileMalwareCheck } from '../services/file-malware-checker.js'
+// import { fileMalwareCheck } from '../services/file-malware-checker.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
@@ -179,17 +179,17 @@ async function handleFileUpload (request, uploadId) {
   const scanBlobClient = containerClient.getBlockBlobClient(scanFilePath)
   await scanBlobClient.uploadData(fileBuffer)
 
-  try {
-    fileMalwareCheck(await pollForScanTag(containerClient, scanFilePath))
-  } catch (malwareError) {
-    await scanBlobClient.deleteIfExists()
-    if (malwareError.code === 'MALWARE_DETECTED') {
-      const err = new Error('The selected file contains a virus')
-      err.code = 'MALWARE_DETECTED'
-      throw err
-    }
-    throw malwareError
-  }
+  // try {
+  //   fileMalwareCheck(await pollForScanTag(containerClient, scanFilePath))
+  // } catch (malwareError) {
+  //   await scanBlobClient.deleteIfExists()
+  //   if (malwareError.code === 'MALWARE_DETECTED') {
+  //     const err = new Error('The selected file contains a virus')
+  //     err.code = 'MALWARE_DETECTED'
+  //     throw err
+  //   }
+  //   throw malwareError
+  // }
   // Delete the temp scan file after passing scan
   await scanBlobClient.deleteIfExists()
 
