@@ -67,6 +67,16 @@ describe(url, () => {
       await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(cacheGetSpy).toHaveBeenCalledWith('test-session-id')
     })
+
+    it('should redirect to link-used when journey lock belongs to another session', async () => {
+      getServer().app.mediaUploadLockCache.get = jest.fn().mockResolvedValue({ userId: 'someone-else' })
+      getServer().app.mediaUploadLockCache.set = jest.fn()
+
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+
+      expect(response.headers.location).toBe(constants.routes.LINK_USED)
+      expect(getServer().app.mediaUploadLockCache.set).not.toHaveBeenCalled()
+    })
   })
   describe('POST', () => {
     it(`Should return redirect response for ${constants.routes.UPLOAD_PHOTO}`, async () => {
