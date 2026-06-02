@@ -34,39 +34,11 @@ describe(baseUrl, () => {
 
     it(`Should display feedback link for ${baseUrl}`, async () => {
       const response = await submitGetRequest({ url }, 'Thank you')
-      expect(response.payload).toContain('<a href="feedback">Give feedback</a>')
-    })
-
-    it(`Should pass feedback link to view for ${baseUrl}`, async () => {
-      const baseUrl = 'https://sir.example.gov.uk'
-      process.env.SMART_INCIDENT_REPORTING_BASE_URL = baseUrl
-
-      const view = jest.fn()
-      const mockRequest = {
-        query: { sirid: 'test-session-id' },
-        yar: {
-          get: jest.fn(),
-          set: jest.fn()
-        },
-        server: {
-          app: {
-            mediaUploadCache: {
-              get: jest.fn().mockResolvedValue({ journey: 'test' }),
-              drop: jest.fn()
-            }
-          }
-        }
-      }
-
-      await successRoute[0].handler(mockRequest, { view })
-
-      expect(view).toHaveBeenCalledWith(constants.views.SUCCESS, {
-        feedback: `${baseUrl}/feedback`
-      })
+      expect(response.payload).toContain('<a href="https://sir-base-url.gov.uk/feedback">Give feedback</a>')
     })
 
     it('should log and continue when local thumbnail deletion throws', async () => {
-      const baseUrl = 'https://sir.example.gov.uk'
+      const baseUrl = 'https://sir-base-url.gov.uk'
       process.env.SMART_INCIDENT_REPORTING_BASE_URL = baseUrl
 
       const view = jest.fn()
@@ -108,6 +80,11 @@ describe(baseUrl, () => {
 
       existsSpy.mockRestore()
       consoleSpy.mockRestore()
+    })
+
+    it('Should hide back link when hideBackLink is true', async () => {
+      const response = await submitGetRequest({ url }, 'Thank you')
+      expect(response.payload).not.toContain('id="back-link"')
     })
   })
 })
