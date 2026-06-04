@@ -47,7 +47,7 @@ function addThumbnailBySirId (request, thumbnail, sirid = getSirIdFromRequest(re
   return existingUploads[sirid].thumbnails
 }
 
-function removeThumbnailFromSession(request, imageIndex, sirid = getSirIdFromRequest(request)) {
+function removeThumbnailFromSession (request, imageIndex, sirid = getSirIdFromRequest(request)) {
   const existingUploads = getExistingUploads(request)
   const sessionDetails = sirid && existingUploads[sirid]
   const thumbnails = sessionDetails && Array.isArray(sessionDetails.thumbnails) ? sessionDetails.thumbnails : null

@@ -31,7 +31,10 @@ const routes = {
 }
 
 for (const [key, value] of Object.entries(views)) {
-  routes[key] = `/${value}`
+  // Journey routes get the /media prefix; HOME, PUBLIC, and HEALTH keep their original paths
+  const journeyRoutes = ['UPLOAD_PHOTO', 'ADD_A_PHOTO', 'YOUR_PHOTOS', 'SEND_PHOTOS', 'SUCCESS', 'TERMS_FOR_UPLOADING_PHOTOS', 'LINK_USED']
+  const prefix = journeyRoutes.includes(key) ? '/media' : ''
+  routes[key] = `${prefix}/${value}`
 }
 
 const statusCodes = {
