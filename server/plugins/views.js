@@ -42,8 +42,8 @@ export default {
       assetPath: '/public',
       govUkHome: constants.urls.GOV_UK_HOME,
       serviceNameUrl: constants.urls.GOV_UK_SERVICE_HOME,
-      serviceName: 'TO DO: set service name',
-      titleSuffix: ' TO DO - GOV.UK',
+      serviceName: 'Report an environmental problem',
+      titleSuffix: ' Report an environmental problem - GOV.UK',
       smartIncidentReportingBaseUrl: config.smartIncidentReportingBaseUrl,
       feedbackUrl: `${config.smartIncidentReportingBaseUrl}/feedback`
     }

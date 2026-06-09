@@ -26,9 +26,9 @@ const schema = Joi.object().keys({
   blobServiceUrl: Joi.string().required(),
   storageAccount: Joi.string().required(),
   storageAccessKey: Joi.string(),
-  smartIncidentReportingBaseUrl: Joi.string().required(),
-  contentSafetyEndpoint: Joi.string().required(),
-  contentSafetyKey: Joi.string().required()
+  smartIncidentReportingBaseUrl: Joi.string().required()
+  // contentSafetyEndpoint: Joi.string().default(),
+  // contentSafetyKey: Joi.string().default('')
 })
 
 // Build config
@@ -48,9 +48,9 @@ const config = {
   blobServiceUrl: process.env.AZURE_BLOB_SERVICE_URL,
   storageAccount: process.env.AZURE_STORAGE_ACCOUNT,
   storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
-  smartIncidentReportingBaseUrl: process.env.SMART_INCIDENT_REPORTING_BASE_URL,
-  contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
-  contentSafetyKey: process.env.CONTENT_SAFETY_KEY
+  smartIncidentReportingBaseUrl: process.env.SMART_INCIDENT_REPORTING_BASE_URL
+  // contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
+  // contentSafetyKey: process.env.CONTENT_SAFETY_KEY
 }
 
 // Validate config
