@@ -81,7 +81,7 @@ describe(baseUrl, () => {
 
     it('should render back link to your photos instead of browser history', async () => {
       const response = await submitGetRequest({ url }, header)
-      expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}"`)
+      expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}?sirid=test-session-id"`)
     })
 
     it('should set upload-id if not present', async () => {
@@ -477,7 +477,7 @@ describe(baseUrl, () => {
         }
 
         await failAction(
-          { path: url },
+          { path: url, query: { sirid: 'test-session-id' } },
           h,
           { output: { statusCode: 413 } }
         )
@@ -486,7 +486,8 @@ describe(baseUrl, () => {
           constants.views.ADD_A_PHOTO,
           expect.objectContaining({
             maxSelectedFiles: false,
-            errorMessage: expect.any(String)
+            errorMessage: expect.any(String),
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=test-session-id`
           })
         )
       })
@@ -498,7 +499,7 @@ describe(baseUrl, () => {
         }
 
         const result = await failAction(
-          { path: url },
+          { path: url, query: { sirid: 'test-session-id' } },
           h,
           { output: { statusCode: 413 } }
         )
