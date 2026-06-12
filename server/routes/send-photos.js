@@ -1,8 +1,30 @@
 import constants from '../utils/constants.js'
+import path from 'path'
 import imageChecker from '../services/image-checker.js'
-import { getUploadContainerClient } from '../services/blob-storage.js'
+import { getUploadContainerClient, moveBlobToFolder } from '../services/blob-storage.js'
 import { sendMessage } from '../services/service-bus.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
+
+const harmfulContent = 'quarantine/harmful-content'
+
+const getFolderByAIResult = (validationResult, imageIndex) => {
+  if (validationResult.skipped || !validationResult.response) return 'cleared'
+
+  const imageResult = validationResult.response[imageIndex]
+  if (!imageResult) return harmfulContent
+  return imageChecker.shouldBlockImage(imageResult) ? harmfulContent : 'cleared'
+}
+
+const getThumbnailBlobPath = (imagePath, existingThumbnailPath) => {
+  if (existingThumbnailPath) {
+    return existingThumbnailPath
+  }
+
+  const ext = path.extname(imagePath)
+  const withoutExt = imagePath.slice(0, imagePath.length - ext.length)
+
+  return `${withoutExt}-thumbnail${ext}`
+}
 
 const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
   const validationResponse = validationResult?.response || []
@@ -14,9 +36,11 @@ const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
       images: images.map((image, index) => {
         const imageSafety = validationResponse[index] || {}
         const imageName = image.finalFilename.split('/').pop()
+        const thumbnailBlobPath = getThumbnailBlobPath(image.finalFilename, image.thumbnailBlobPath)
 
         return {
-          imageLink: `${uploadContainerUrl}/${sirId}/${imageName}`,
+          imageLink: `${uploadContainerUrl}/${image.finalFilename}`,
+          thumbnailLink: `${uploadContainerUrl}/${thumbnailBlobPath}`,
           imageName,
           severityScores: imageSafety.severityScores || 'none',
           metadata: {
@@ -53,10 +77,29 @@ const handlers = {
     const images = getThumbnailsBySirId(request)
     const uploadContainerClient = await getUploadContainerClient()
     const validationResult = await imageChecker.validate(images)
-    const payload = buildPayload(sirid, images, validationResult, uploadContainerClient.url)
+
+    const movedImages = await Promise.all(
+      images.map(async (image, index) => {
+        const folder = getFolderByAIResult(validationResult, index)
+        const thumbBlobPath = getThumbnailBlobPath(image.finalFilename, image.thumbnailBlobPath)
+
+        const [newFinalFilename, newThumbnailBlobPath] = await Promise.all([
+          moveBlobToFolder(uploadContainerClient, image.finalFilename, folder),
+          moveBlobToFolder(uploadContainerClient, thumbBlobPath, folder)
+        ])
+
+        return {
+          ...image,
+          finalFilename: newFinalFilename,
+          thumbnailBlobPath: newThumbnailBlobPath
+        }
+      })
+    )
+
+    const payload = buildPayload(sirid, movedImages, validationResult, uploadContainerClient.url)
     console.log('Payload to send to service bus', JSON.stringify(payload, null, 2))
     await sendMessage(request.logger, payload)
-    const redirectUrl = constants.routes.SUCCESS + (sirid ? `?sirid=${sirid}` : '')
+    const redirectUrl = `${constants.routes.SUCCESS}?sirid=${sirid}`
     return h.redirect(redirectUrl)
   }
 }

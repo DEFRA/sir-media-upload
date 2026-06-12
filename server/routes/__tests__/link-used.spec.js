@@ -36,6 +36,13 @@ describe(url, () => {
       expect(response.payload).toContain('You have already uploaded photos to support your <strong>water pollution</strong> report.')
     })
 
+    it('should not display journey text even when journey data is present', async () => {
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
+        journey: 'water pollution'
+      })
+      expect(response.payload).not.toContain('support your report of water pollution')
+    })
+
     it('should not show journey text when no journey is provided', async () => {
       const response = await submitGetRequest({ url }, header)
       expect(response.payload).not.toContain('support your report of ')

@@ -47,31 +47,19 @@ function addThumbnailBySirId (request, thumbnail, sirid = getSirIdFromRequest(re
   return existingUploads[sirid].thumbnails
 }
 
-function removeThumbnailBySirIdAtIndex (request, imageIndex, sirid = getSirIdFromRequest(request)) {
-  if (!sirid) {
-    return { removed: null, thumbnails: [] }
-  }
-
+function removeThumbnailFromSession(request, imageIndex, sirid = getSirIdFromRequest(request)) {
   const existingUploads = getExistingUploads(request)
-  const sessionDetails = existingUploads[sirid]
+  const sessionDetails = sirid && existingUploads[sirid]
+  const thumbnails = sessionDetails && Array.isArray(sessionDetails.thumbnails) ? sessionDetails.thumbnails : null
+  const idx = Number(imageIndex)
 
-  if (!sessionDetails || !sessionDetails.thumbnails) {
-    return { removed: null, thumbnails: [] }
+  if (!thumbnails || !Number.isInteger(idx) || idx < 0 || idx >= thumbnails.length) {
+    return null
   }
 
-  const thumbnails = sessionDetails.thumbnails
-  const idx = Number.parseInt(imageIndex, 10)
-
-  if (Number.isNaN(idx) || idx < 0 || idx >= thumbnails.length) {
-    return { removed: null, thumbnails }
-  }
-
-  const removed = thumbnails[idx]
-  thumbnails.splice(idx, 1)
-  existingUploads[sirid].thumbnails = thumbnails
+  const [removed] = thumbnails.splice(idx, 1)
   setExistingUploads(request, existingUploads)
-
-  return { removed, thumbnails }
+  return removed
 }
 
 function clearSessionDetailsBySirId (request, sirid = getSirIdFromRequest(request)) {
@@ -139,6 +127,6 @@ export {
   getSessionDetailsBySirId,
   getThumbnailsBySirId,
   addThumbnailBySirId,
-  removeThumbnailBySirIdAtIndex,
+  removeThumbnailFromSession,
   clearSessionDetailsBySirId
 }

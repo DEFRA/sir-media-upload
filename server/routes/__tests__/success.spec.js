@@ -87,5 +87,10 @@ describe(baseUrl, () => {
       existsSpy.mockRestore()
       consoleSpy.mockRestore()
     })
+
+    it('Should hide back link when hideBackLink is true', async () => {
+      const response = await submitGetRequest({ url }, 'Thank you')
+      expect(response.payload).not.toContain('id="back-link"')
+    })
   })
 })

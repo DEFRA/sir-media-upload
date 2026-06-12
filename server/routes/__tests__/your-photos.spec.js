@@ -35,14 +35,14 @@ const mockThumbnails = [
 ]
 
 describe(baseUrl, () => {
-  let mockDeleteIfExists
+  const state = { mockDeleteIfExists: null }
 
   beforeEach(() => {
-    mockDeleteIfExists = jest.fn().mockResolvedValue()
+    state.mockDeleteIfExists = jest.fn().mockResolvedValue()
 
     getUploadContainerClient.mockResolvedValue({
       getBlockBlobClient: () => ({
-        deleteIfExists: mockDeleteIfExists
+        deleteIfExists: state.mockDeleteIfExists
       })
     })
 
@@ -235,7 +235,7 @@ describe(baseUrl, () => {
         payload: { imageIndex: '0' }
       }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...mockThumbnails] } } })
 
-      expect(mockDeleteIfExists).toHaveBeenCalled()
+      expect(state.mockDeleteIfExists).toHaveBeenCalled()
     })
 
     it('should delete both original and thumbnail from blob storage', async () => {
@@ -245,7 +245,25 @@ describe(baseUrl, () => {
       }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: [...mockThumbnails] } } })
 
       // Should be called twice: once for original, once for thumbnail
-      expect(mockDeleteIfExists).toHaveBeenCalledTimes(2)
+      expect(state.mockDeleteIfExists).toHaveBeenCalledTimes(2)
+    })
+
+    it('should use thumbnailBlobPath when present for thumbnail deletion', async () => {
+      const thumbnails = [{
+        finalFilename: 'upload-id/photo1.png',
+        thumbnailBlobPath: 'thumbnails/upload-id/photo1-thumb.png',
+        thumbLoc: '/public/thumbnails/upload-id-0.png'
+      }]
+      const mockGetBlockBlobClient = jest.fn().mockReturnValue({ deleteIfExists: state.mockDeleteIfExists })
+      getUploadContainerClient.mockResolvedValue({ getBlockBlobClient: mockGetBlockBlobClient })
+
+      await submitPostRequest({
+        url,
+        payload: { imageIndex: '0' }
+      }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+
+      expect(mockGetBlockBlobClient).toHaveBeenCalledWith('upload-id/photo1.png')
+      expect(mockGetBlockBlobClient).toHaveBeenCalledWith('thumbnails/upload-id/photo1-thumb.png')
     })
 
     it('should delete local thumbnail file', async () => {
@@ -303,7 +321,7 @@ describe(baseUrl, () => {
     })
 
     it('should handle errors during blob deletion gracefully', async () => {
-      mockDeleteIfExists.mockRejectedValue(new Error('Blob deletion failed'))
+      state.mockDeleteIfExists.mockRejectedValue(new Error('Blob deletion failed'))
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
 
       const response = await submitPostRequest({

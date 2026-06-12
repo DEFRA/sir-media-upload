@@ -47,11 +47,17 @@ const statusCodes = {
   SERVICE_UNAVAILABLE: 503
 }
 
+const uploadErrors = {
+  noFileScanResponse: 'Timed out awaiting anti virus scan result',
+  threatDetected: 'The selected file contains a virus'
+}
+
 export default Object.freeze({
   routes,
   views,
   statusCodes,
-  urls
+  urls,
+  uploadErrors
   // serviceNames,
   // redisKeys,
   // errorSummary,
