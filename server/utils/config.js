@@ -9,7 +9,7 @@ const getBoolean = booleanString =>
 export const updateBaseUrl = urlString => {
   const value = String(urlString)
 
-  if (value.startsWith('https://')) {
+  if (value.startsWith('https://') || value.startsWith('http://')) {
     return value
   }
 
