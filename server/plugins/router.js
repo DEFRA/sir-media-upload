@@ -2,7 +2,7 @@ import constants from '../utils/constants.js'
 
 const router = async () => {
   const routes = [].concat(
-    ...await Promise.all(Object.values(constants.views).map(async route => (await import(`../routes/${route}.js`)).default))
+    ...await Promise.all(Object.values(constants.views).map(async view => (await import(`../routes/${view}.js`)).default))
   )
 
   return {
