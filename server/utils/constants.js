@@ -1,3 +1,5 @@
+import config from './config.js'
+
 const urls = {
   GOV_UK_HOME: 'https://www.gov.uk'
 }
@@ -26,13 +28,9 @@ const views = {
   HEALTH
 }
 
-const routes = {
-  ...views
-}
-
-for (const [key, value] of Object.entries(views)) {
-  routes[key] = `/${value}`
-}
+const routes = Object.fromEntries(
+  Object.entries(views).map(([key, value]) => [key, `${config.appPathPrefix}/${value}`])
+)
 
 const statusCodes = {
   OK: 200,
