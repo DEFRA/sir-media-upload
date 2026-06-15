@@ -242,9 +242,10 @@ const handlers = {
     }
 
     const { sirid } = request.query
+    const thumbnails = getThumbnailsBySirId(request)
 
     return h.view(constants.views.ADD_A_PHOTO, {
-      maxSelectedFiles: false,
+      maxSelectedFiles: thumbnails.length >= MAX_SELECTED_FILES,
       backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
     })
   },

@@ -89,6 +89,25 @@ describe(baseUrl, () => {
       expect(response.request.yar.get('upload-id')).toBeDefined()
     })
 
+    it('should show max selected files content when 5 files already exist', async () => {
+      const thumbnails = Array.from({ length: 5 }, (_, index) => ({
+        finalFilename: `upload-id/${index}.png`,
+        thumbLoc: `/public/thumbnails/upload-id-${index}.png`,
+        fileSizeBytes: 1024
+      }))
+
+      const response = await submitGetRequest(
+        { url },
+        header,
+        constants.statusCodes.OK,
+        { 'existing-uploads': { 'test-session-id': { thumbnails } } }
+      )
+
+      expect(response.result).toContain('You have added the maximum number of photos allowed')
+      expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}?sirid=test-session-id"`)
+      expect(response.result).not.toContain('Upload a photo')
+    })
+
     // it('should set upload-id if not present', async () => {
     //   const response = await submitGetRequest({ url }, header)
     //   expect(response.request.yar.get('upload-id')).toBeDefined()
