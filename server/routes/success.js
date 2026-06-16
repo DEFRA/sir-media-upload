@@ -2,12 +2,13 @@ import constants from '../utils/constants.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import dirname from '../../dirname.cjs'
-import { hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
+import { addSirIdToQueryString, hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     const sirid = request.query.sirid

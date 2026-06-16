@@ -1,8 +1,17 @@
 import constants from '../utils/constants.js'
 
 const handlers = {
-  get: (_request, h) => {
-    return h.view(constants.views.LINK_USED)
+  get: async (request, h) => {
+    const sirid = request.query.sirid
+    const requestJourney = request.yar.get('journey')
+    const cachedData = sirid ? await request.server.app.mediaUploadCache.get(sirid) : null
+    const journey = cachedData?.journey || requestJourney || ''
+
+    return h.view(constants.views.LINK_USED, {
+      sirid,
+      cachedData,
+      journey
+    })
   }
 }
 

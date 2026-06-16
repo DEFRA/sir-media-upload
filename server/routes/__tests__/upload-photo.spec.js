@@ -32,6 +32,12 @@ describe(url, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
     it('should return OK when journey and dateTime are in cache', async () => {
       const dateTime = new Date(2026, 3, 1, 12, 30)
       jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue({ journey: 'smell', dateTime })
@@ -77,6 +83,12 @@ describe(url, () => {
     it('should redirect to link-used when sirid is missing', async () => {
       const response = await submitPostRequest({ url: constants.routes.UPLOAD_PHOTO }, constants.statusCodes.REDIRECT)
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitPostRequest({ url }, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
     })
 
     it(`Should redirect to ${constants.routes.ADD_A_PHOTO} for ${constants.routes.UPLOAD_PHOTO}`, async () => {
