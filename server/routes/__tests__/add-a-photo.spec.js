@@ -79,9 +79,15 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
     it('should render back link to your photos instead of browser history', async () => {
       const response = await submitGetRequest({ url }, header)
-      expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}"`)
+      expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}?sirid=test-session-id"`)
     })
 
     it('should set upload-id if not present', async () => {
@@ -111,6 +117,18 @@ describe(baseUrl, () => {
       }, constants.statusCodes.REDIRECT)
 
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const form = createForm('valid.png', mockValidPng, 'image/png')
+      const response = await submitPostRequest({
+        url,
+        payload: form.getBuffer(),
+        headers: form.getHeaders()
+      }, constants.statusCodes.REDIRECT)
+
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
     })
 
     describe('file type', () => {
@@ -477,7 +495,7 @@ describe(baseUrl, () => {
         }
 
         await failAction(
-          { path: url },
+          { path: url, query: { sirid: 'test-session-id' } },
           h,
           { output: { statusCode: 413 } }
         )
@@ -486,7 +504,8 @@ describe(baseUrl, () => {
           constants.views.ADD_A_PHOTO,
           expect.objectContaining({
             maxSelectedFiles: false,
-            errorMessage: expect.any(String)
+            errorMessage: expect.any(String),
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=test-session-id`
           })
         )
       })
@@ -498,7 +517,7 @@ describe(baseUrl, () => {
         }
 
         const result = await failAction(
-          { path: url },
+          { path: url, query: { sirid: 'test-session-id' } },
           h,
           { output: { statusCode: 413 } }
         )

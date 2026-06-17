@@ -53,6 +53,23 @@ describe(baseUrl, () => {
       const response = await submitGetRequest({ url: baseUrl }, null, constants.statusCodes.REDIRECT)
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
+    it('should render a send photos submit button', async () => {
+      const response = await submitGetRequest({ url }, 'Send photos', constants.statusCodes.OK)
+      expect(response.payload).toContain('Send photos')
+    })
+
+    it.each([0, 1, 2, 3, 4, 5])('should display %i photos from the session', async (count) => {
+      const thumbnails = generateThumbnails(count)
+      const response = await submitGetRequest({ url }, 'Send photos', constants.statusCodes.OK, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(response.payload).toContain(`You have added ${count} out of a maximum of 5.`)
+    })
   })
 
   describe('POST', () => {

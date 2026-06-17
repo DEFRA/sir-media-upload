@@ -238,27 +238,32 @@ async function handleFileUpload (request, uploadId) {
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
+
+    const { sirid } = request.query
 
     return h.view(constants.views.ADD_A_PHOTO, {
       maxSelectedFiles: false,
-      backLinkHref: constants.routes.YOUR_PHOTOS
+      backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
     })
   },
 
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     const uploadId = request.query.sirid
+    const { sirid } = request.query
     const thumbnails = getThumbnailsBySirId(request)
 
     if (thumbnails.length >= MAX_SELECTED_FILES) {
       return h.view(constants.views.ADD_A_PHOTO, {
         maxSelectedFiles: true,
-        backLinkHref: constants.routes.YOUR_PHOTOS
+        backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
       })
     }
 
@@ -276,35 +281,35 @@ const handlers = {
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'Select a file',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 
         case 'INVALID_IMAGE':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'Select a file in a different image format, for example JPEG or PNG',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 
         case 'FILE_TOO_LARGE':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file must be smaller than 4MB',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 
         case 'MALWARE_DETECTED':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file contains a virus',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 
         default:
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file could not be uploaded – try again',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
       }
     }
@@ -332,7 +337,8 @@ export default [
         maxBytes: PAYLOAD_MAX_BYTES,
         failAction: (request, h, err) => {
           if (err?.output?.statusCode === 413) {
-            return maximumFileSizeExceeded(h).takeover()
+            const { sirid } = request.query
+            return maximumFileSizeExceeded(h, sirid).takeover()
           }
           throw err
         }
@@ -341,10 +347,10 @@ export default [
   }
 ]
 
-const maximumFileSizeExceeded = (h) => {
+const maximumFileSizeExceeded = (h, sirid) => {
   return h.view(constants.views.ADD_A_PHOTO, {
     maxSelectedFiles: false,
     errorMessage: 'The selected file must be smaller than 25MB',
-    backLinkHref: constants.routes.YOUR_PHOTOS
+    backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
   })
 }

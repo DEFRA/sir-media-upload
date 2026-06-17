@@ -26,6 +26,16 @@ describe(url, () => {
       expect(response.payload).toContain('We have received your photos')
     })
 
+    it('should display journey from cached data when provided', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'water pollution' })
+
+      const response = await submitGetRequest({
+        url: `${url}?sirid=test-sirid`
+      }, header)
+
+      expect(response.payload).toContain('You have already uploaded photos to support your <strong>water pollution</strong> report.')
+    })
+
     it('should not display journey text even when journey data is present', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
         journey: 'water pollution'
@@ -38,7 +48,7 @@ describe(url, () => {
       expect(response.payload).not.toContain('support your report of ')
     })
 
-    it(`Should render view without feedback context for ${url}`, async () => {
+    it(`Should pass feedback link to view for ${url}`, async () => {
       const baseUrl = 'https://sir-base-url.gov.uk'
       process.env.SMART_INCIDENT_REPORTING_BASE_URL = baseUrl
 
@@ -59,7 +69,19 @@ describe(url, () => {
 
       await linkUsedRoute[0].handler(request, { view })
 
-      expect(view).toHaveBeenCalledWith(constants.views.LINK_USED)
+      expect(view).toHaveBeenCalledWith(constants.views.LINK_USED, {
+        sirid: undefined,
+        cachedData: null,
+        journey: ''
+      })
+    })
+
+    it('should display journey from session when cache has no journey', async () => {
+      const response = await submitGetRequest({ url: `${url}?sirid=test-sirid` }, header, constants.statusCodes.OK, {
+        journey: 'water pollution'
+      })
+
+      expect(response.payload).toContain('You have already uploaded photos to support your <strong>water pollution</strong> report.')
     })
   })
 })
