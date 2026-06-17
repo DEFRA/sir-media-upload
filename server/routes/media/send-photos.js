@@ -1,9 +1,9 @@
-import constants from '../utils/constants.js'
+import constants from '../../utils/constants.js'
 import path from 'path'
-import imageChecker from '../services/image-checker.js'
-import { getUploadContainerClient, moveBlobToFolder } from '../services/blob-storage.js'
-import { sendMessage } from '../services/service-bus.js'
-import { hasValidSirId, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
+import imageChecker from '../../services/image-checker.js'
+import { getUploadContainerClient, moveBlobToFolder } from '../../services/blob-storage.js'
+import { sendMessage } from '../../services/service-bus.js'
+import { hasValidSirId, getThumbnailsBySirId } from '../../utils/upload-session-helpers.js'
 
 const harmfulContent = 'quarantine/harmful-content'
 

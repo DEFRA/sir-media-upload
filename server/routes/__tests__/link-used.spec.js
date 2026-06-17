@@ -1,7 +1,7 @@
 import { submitGetRequest } from '../../__test-helpers__/server.js'
 import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
-import linkUsedRoute from '../link-used.js'
+import linkUsedRoute from '../media/link-used.js'
 
 const url = constants.routes.LINK_USED
 const header = 'This link has been used'

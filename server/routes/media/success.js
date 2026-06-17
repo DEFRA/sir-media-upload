@@ -1,8 +1,8 @@
-import constants from '../utils/constants.js'
+import constants from '../../utils/constants.js'
 import fs from 'node:fs'
 import path from 'node:path'
-import dirname from '../../dirname.cjs'
-import { hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
+import dirname from '../../../dirname.cjs'
+import { hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId } from '../../utils/upload-session-helpers.js'
 
 const handlers = {
   get: async (request, h) => {

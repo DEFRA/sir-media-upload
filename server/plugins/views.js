@@ -40,6 +40,7 @@ export default {
       appVersion: version,
       env: config.env,
       assetPath: '/public',
+      appPathPrefix: config.appPathPrefix,
       govUkHome: constants.urls.GOV_UK_HOME,
       serviceNameUrl: constants.urls.GOV_UK_SERVICE_HOME,
       serviceName: 'TO DO: set service name',

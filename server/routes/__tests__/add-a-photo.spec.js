@@ -7,7 +7,7 @@ import path from 'node:path'
 import FormData from 'form-data'
 import sharp from 'sharp'
 import heicConvert from 'heic-convert'
-import * as addPhoto from '../add-a-photo.js'
+import * as addPhoto from '../media/add-a-photo.js'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
 
 jest.mock('../../services/blob-storage.js', () => ({

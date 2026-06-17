@@ -1,12 +1,12 @@
-import constants from '../utils/constants.js'
+import constants from '../../utils/constants.js'
 import sharp from 'sharp'
 import heicConvert from 'heic-convert'
 import fs from 'node:fs'
 import path from 'node:path'
-import dirname from '../../dirname.cjs'
-import { getUploadContainerClient } from '../services/blob-storage.js'
-import { fileMalwareCheck } from '../services/file-malware-checker.js'
-import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../utils/upload-session-helpers.js'
+import dirname from '../../../dirname.cjs'
+import { getUploadContainerClient } from '../../services/blob-storage.js'
+import { fileMalwareCheck } from '../../services/file-malware-checker.js'
+import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
