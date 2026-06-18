@@ -270,13 +270,7 @@ const handlers = {
     try {
       const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localThumbnailPath } = await handleFileUpload(request, uploadId)
       const thumbLoc = `/public/thumbnails/${localThumbnailPath}`
-      addThumbnailBySirId(request, {
-        finalFilename,
-        thumbLoc,
-        thumbnailBlobPath,
-        fileSizeBytes,
-        aiCheckerImage
-      })
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 

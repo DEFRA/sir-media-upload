@@ -21,10 +21,7 @@ const generateThumbnails = (count) =>
   Array.from({ length: count }, (_, index) => ({
     finalFilename: `quarantine/test-session-id/photo${index + 1}.jpg`,
     thumbnailBlobPath: `quarantine/test-session-id/photo${index + 1}-thumbnail.jpg`,
-    fileSizeBytes: (index + 1) * 1024 * 1024,
-    altText: `Alt text ${index + 1}`,
-    altTextSource: 'azure-openai',
-    altTextConfidence: null
+    fileSizeBytes: (index + 1) * 1024 * 1024
   }))
 
 const getPayload = () => sendMessage.mock.calls[0][1]
@@ -211,28 +208,6 @@ describe(baseUrl, () => {
       }]
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(getPayload().mediaUpload.images[0].metadata.fileType).toBe('')
-    })
-
-    it('includes altText in payload metadata', async () => {
-      const thumbnails = generateThumbnails(1)
-      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
-      expect(getPayload().mediaUpload.images[0].metadata.altText).toBe('Alt text 1')
-    })
-
-    it('includes altTextSource in payload metadata', async () => {
-      const thumbnails = generateThumbnails(1)
-      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
-      expect(getPayload().mediaUpload.images[0].metadata.altTextSource).toBe('azure-openai')
-    })
-
-    it('sets altText null in payload metadata when missing', async () => {
-      const thumbnails = [{
-        finalFilename: 'quarantine/test-session-id/photo1.jpg',
-        thumbnailBlobPath: 'quarantine/test-session-id/photo1-thumbnail.jpg',
-        fileSizeBytes: 1024
-      }]
-      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
-      expect(getPayload().mediaUpload.images[0].metadata.altText).toBe(null)
     })
   })
 })
