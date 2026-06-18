@@ -6,6 +6,7 @@ import path from 'node:path'
 import dirname from '../../dirname.cjs'
 import { getUploadContainerClient } from '../services/blob-storage.js'
 import { fileMalwareCheck } from '../services/file-malware-checker.js'
+import imageAltText from '../services/image-alt-text.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
@@ -15,6 +16,14 @@ const QUALITY_LEVELS = [80, 70, 60, 50, 40, 30]
 const RESIZE_WIDTH_RATIO = 0.8
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024 // 25MB
 const UPLOAD_MAX_BYTES = 4 * 1024 * 1024 // 4MB
+
+const getMimeTypeByExtension = (extension) => {
+  if (extension === '.png') {
+    return 'image/png'
+  }
+
+  return 'image/jpeg'
+}
 
 export function streamToBuffer (stream) {
   return new Promise((resolve, reject) => {
@@ -230,6 +239,7 @@ async function handleFileUpload (request, uploadId) {
     finalFilename,
     fileSizeBytes: convertedBuffer.length,
     aiCheckerImage,
+    altTextImage: aiCheckerImage ? Buffer.from(aiCheckerImage, 'base64') : convertedBuffer,
     thumbnailBlobPath,
     localThumbnailPath: localFilename
   }
@@ -268,9 +278,24 @@ const handlers = {
     }
 
     try {
-      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localThumbnailPath } = await handleFileUpload(request, uploadId)
+      const { finalFilename, fileSizeBytes, aiCheckerImage, altTextImage, thumbnailBlobPath, localThumbnailPath } = await handleFileUpload(request, uploadId)
       const thumbLoc = `/public/thumbnails/${localThumbnailPath}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage })
+      const extension = path.extname(finalFilename).toLowerCase()
+      const altTextResult = await imageAltText.generateAltText(
+        altTextImage,
+        getMimeTypeByExtension(extension)
+      )
+
+      addThumbnailBySirId(request, {
+        finalFilename,
+        thumbLoc,
+        thumbnailBlobPath,
+        fileSizeBytes,
+        aiCheckerImage,
+        altText: altTextResult.altText,
+        altTextSource: altTextResult.source,
+        altTextConfidence: altTextResult.confidence
+      })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 

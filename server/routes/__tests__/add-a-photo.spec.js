@@ -9,9 +9,14 @@ import sharp from 'sharp'
 import heicConvert from 'heic-convert'
 import * as addPhoto from '../add-a-photo.js'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
+import imageAltText from '../../services/image-alt-text.js'
 
 jest.mock('../../services/blob-storage.js', () => ({
   getUploadContainerClient: jest.fn()
+}))
+
+jest.mock('../../services/image-alt-text.js', () => ({
+  generateAltText: jest.fn()
 }))
 
 jest.mock('heic-convert', () => jest.fn())
@@ -60,6 +65,12 @@ describe(baseUrl, () => {
         delete: () => Promise.resolve(),
         deleteIfExists: () => Promise.resolve({ succeeded: true })
       })
+    })
+    imageAltText.generateAltText.mockResolvedValue({
+      skipped: false,
+      altText: 'Test generated alt text',
+      confidence: null,
+      source: 'azure-openai'
     })
     getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
   })
@@ -639,6 +650,40 @@ describe(baseUrl, () => {
         const existingUploads = response.request.yar.get('existing-uploads')
         const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails[0]).toHaveProperty('fileSizeBytes')
+      })
+
+      it('should store altText in session thumbnail entry', async () => {
+        const form = createForm('valid.png', mockValidPng, 'image/png')
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+        expect(thumbnails[0].altText).toBe('Test generated alt text')
+      })
+
+      it('should store altTextSource in session thumbnail entry', async () => {
+        const form = createForm('valid.png', mockValidPng, 'image/png')
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+        expect(thumbnails[0].altTextSource).toBe('azure-openai')
+      })
+
+      it('calls alt text generation during successful upload', async () => {
+        const form = createForm('valid.png', mockValidPng, 'image/png')
+        await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+        expect(imageAltText.generateAltText).toHaveBeenCalled()
       })
 
       it('should store upload fallback name in finalFilename when basename is empty', async () => {
