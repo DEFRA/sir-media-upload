@@ -12,6 +12,7 @@ const SUCCESS = 'success'
 const TERMS_FOR_UPLOADING_PHOTOS = 'terms-for-uploading-photos'
 const LINK_USED = 'link-used'
 const HEALTH = 'health'
+const LINK_EXPIRED = 'link-expired'
 
 const views = {
   HOME,
@@ -23,7 +24,8 @@ const views = {
   SUCCESS,
   TERMS_FOR_UPLOADING_PHOTOS,
   LINK_USED,
-  HEALTH
+  HEALTH,
+  LINK_EXPIRED
 }
 
 const routes = {

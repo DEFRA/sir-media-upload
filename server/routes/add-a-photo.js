@@ -6,7 +6,7 @@ import path from 'node:path'
 import dirname from '../../dirname.cjs'
 import { getUploadContainerClient } from '../services/blob-storage.js'
 import { fileMalwareCheck } from '../services/file-malware-checker.js'
-import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../utils/upload-session-helpers.js'
+import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId, getInvalidSirIdRedirectUrl } from '../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
@@ -238,7 +238,7 @@ async function handleFileUpload (request, uploadId) {
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 
@@ -252,7 +252,7 @@ const handlers = {
 
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 

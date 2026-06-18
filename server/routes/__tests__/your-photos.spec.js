@@ -67,10 +67,10 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
-    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+    it('should redirect to link-expired with sirid when sirid is present but invalid', async () => {
       getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
       const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
-      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_EXPIRED}?sirid=test-session-id`)
     })
 
     it('should display correct header', async () => {
@@ -198,14 +198,14 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
-    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+    it('should redirect to link-expired with sirid when sirid is present but invalid', async () => {
       getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
       const response = await submitPostRequest({
         url,
         payload: { imageIndex: '0' }
       }, constants.statusCodes.REDIRECT)
 
-      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_EXPIRED}?sirid=test-session-id`)
     })
 
     it('should redirect to YOUR_PHOTOS after removing a photo', async () => {

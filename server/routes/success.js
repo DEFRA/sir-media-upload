@@ -2,12 +2,12 @@ import constants from '../utils/constants.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import dirname from '../../dirname.cjs'
-import { addSirIdToQueryString, hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
+import { hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId, markSirIdAsSubmitted, getInvalidSirIdRedirectUrl } from '../utils/upload-session-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 
@@ -27,6 +27,7 @@ const handlers = {
         })
       }
     })
+    markSirIdAsSubmitted(request, sirid)
     removeSirIdFromSession(request)
     await request.server.app.mediaUploadCache.drop(sirid)
 
