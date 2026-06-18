@@ -38,11 +38,7 @@ const schema = Joi.object().keys({
   storageAccessKey: Joi.string().optional(),
   smartIncidentReportingBaseUrl: Joi.string().required(),
   contentSafetyEndpoint: Joi.string().required(),
-  contentSafetyKey: Joi.string().required(),
-  azureOpenAiEndpoint: Joi.string().optional(),
-  azureOpenAiKey: Joi.string().optional(),
-  azureOpenAiApiVersion: Joi.string().default('2024-10-21'),
-  azureOpenAiModel: Joi.string().default('gpt-4o-mini')
+  contentSafetyKey: Joi.string().required()
 })
 
 // Build config
@@ -64,11 +60,7 @@ const config = {
   storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
   smartIncidentReportingBaseUrl: updateBaseUrl(process.env.SMART_INCIDENT_REPORTING_BASE_URL),
   contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
-  contentSafetyKey: process.env.CONTENT_SAFETY_KEY,
-  azureOpenAiEndpoint: process.env.AZURE_OPENAI_ENDPOINT,
-  azureOpenAiKey: process.env.AZURE_OPENAI_KEY,
-  azureOpenAiApiVersion: process.env.AZURE_OPENAI_API_VERSION,
-  azureOpenAiModel: process.env.AZURE_OPENAI_MODEL
+  contentSafetyKey: process.env.CONTENT_SAFETY_KEY
 }
 
 // Validate config
