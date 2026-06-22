@@ -1,6 +1,7 @@
 import constants from '../utils/constants.js'
 import path from 'path'
 import imageChecker from '../services/image-checker.js'
+import altTextGenerator from '../services/alt-text-generator.js'
 import { getUploadContainerClient, moveBlobToFolder } from '../services/blob-storage.js'
 import { sendMessage } from '../services/service-bus.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
@@ -26,8 +27,9 @@ const getThumbnailBlobPath = (imagePath, existingThumbnailPath) => {
   return `${withoutExt}-thumbnail${ext}`
 }
 
-const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
+const buildPayload = (sirId, images, validationResult, altTextResult, uploadContainerUrl) => {
   const validationResponse = validationResult?.response || []
+  const altTextResponse = altTextResult?.response || []
 
   return {
     mediaUpload: {
@@ -35,6 +37,7 @@ const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
       timestamp: new Date().toISOString(),
       images: images.map((image, index) => {
         const imageSafety = validationResponse[index] || {}
+        const imageAltText = altTextResponse[index] || {}
         const imageName = image.finalFilename.split('/').pop()
         const thumbnailBlobPath = getThumbnailBlobPath(image.finalFilename, image.thumbnailBlobPath)
 
@@ -43,6 +46,8 @@ const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
           thumbnailLink: `${uploadContainerUrl}/${thumbnailBlobPath}`,
           imageName,
           severityScores: imageSafety.severityScores || 'none',
+          altText: imageAltText.altText || null,
+          altTextSource: imageAltText.source || 'none',
           metadata: {
             size: image.fileSizeBytes ? (image.fileSizeBytes / (1024 * 1024)).toFixed(2) : null,
             fileType: imageName.includes('.') ? imageName.split('.').pop().toLowerCase() : ''
@@ -77,6 +82,7 @@ const handlers = {
     const images = getThumbnailsBySirId(request)
     const uploadContainerClient = await getUploadContainerClient()
     const validationResult = await imageChecker.validate(images)
+    const altTextResult = await altTextGenerator.generate(images)
 
     const movedImages = await Promise.all(
       images.map(async (image, index) => {
@@ -96,7 +102,7 @@ const handlers = {
       })
     )
 
-    const payload = buildPayload(sirid, movedImages, validationResult, uploadContainerClient.url)
+    const payload = buildPayload(sirid, movedImages, validationResult, altTextResult, uploadContainerClient.url)
     console.log('Payload to send to service bus', JSON.stringify(payload, null, 2))
     await sendMessage(request.logger, payload)
     const redirectUrl = `${constants.routes.SUCCESS}?sirid=${sirid}`

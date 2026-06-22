@@ -28,7 +28,10 @@
                     {{ photo.filename }}
                 </dt>
                 <dd class="govuk-summary-list__value">
-                    <img src="{{ photo.thumbLoc }}" alt="Uploaded thumbnail" style="width:100%;height:auto;">
+                    <img src="{{ photo.thumbLoc }}" alt="{{ photo.altText or 'Uploaded thumbnail' }}" style="width:100%;height:auto;">
+                    <p class="govuk-body-s govuk-!-margin-top-2 govuk-!-margin-bottom-0">
+                        Alt text: {{ photo.altText or 'No alt text generated' }}
+                    </p>
                 </dd>
                 <dd class="govuk-summary-list__actions vertical-align-top">
                     <form method="post" action="#" style="display:inline;">

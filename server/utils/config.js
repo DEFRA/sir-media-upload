@@ -38,7 +38,12 @@ const schema = Joi.object().keys({
   storageAccessKey: Joi.string().optional(),
   smartIncidentReportingBaseUrl: Joi.string().required(),
   contentSafetyEndpoint: Joi.string().required(),
-  contentSafetyKey: Joi.string().required()
+  contentSafetyKey: Joi.string().required(),
+  altTextEnabled: Joi.bool().default(false),
+  altTextEndpoint: Joi.string().optional(),
+  altTextApiKey: Joi.string().optional(),
+  altTextDeployment: Joi.string().optional(),
+  altTextApiVersion: Joi.string().default('2024-10-21')
 })
 
 // Build config
@@ -60,7 +65,12 @@ const config = {
   storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
   smartIncidentReportingBaseUrl: updateBaseUrl(process.env.SMART_INCIDENT_REPORTING_BASE_URL),
   contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
-  contentSafetyKey: process.env.CONTENT_SAFETY_KEY
+  contentSafetyKey: process.env.CONTENT_SAFETY_KEY,
+  altTextEnabled: getBoolean(process.env.ALT_TEXT_ENABLED),
+  altTextEndpoint: process.env.ALT_TEXT_ENDPOINT,
+  altTextApiKey: process.env.ALT_TEXT_API_KEY,
+  altTextDeployment: process.env.ALT_TEXT_DEPLOYMENT,
+  altTextApiVersion: process.env.ALT_TEXT_API_VERSION
 }
 
 // Validate config
