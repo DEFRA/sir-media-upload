@@ -2,6 +2,7 @@ import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/serv
 import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
 import imageChecker from '../../services/image-checker.js'
+import altTextGenerator from '../../services/alt-text-generator.js'
 import { getUploadContainerClient, moveBlobToFolder } from '../../services/blob-storage.js'
 import { sendMessage } from '../../services/service-bus.js'
 
@@ -12,6 +13,13 @@ jest.mock('../../services/blob-storage.js', () => ({
 
 jest.mock('../../services/service-bus.js', () => ({
   sendMessage: jest.fn()
+}))
+
+jest.mock('../../services/alt-text-generator.js', () => ({
+  __esModule: true,
+  default: {
+    generate: jest.fn()
+  }
 }))
 
 const baseUrl = constants.routes.SEND_PHOTOS
@@ -29,6 +37,7 @@ const getPayload = () => sendMessage.mock.calls[0][1]
 describe(baseUrl, () => {
   beforeEach(() => {
     jest.spyOn(imageChecker, 'validate').mockResolvedValue({ success: true, skipped: true })
+    altTextGenerator.generate.mockResolvedValue({ success: true, skipped: true, response: [] })
     getUploadContainerClient.mockResolvedValue({ url: 'https://storage-account/sir-media-uploads' })
     moveBlobToFolder.mockImplementation(async (_client, sourcePath, destFolder) => {
       const parts = sourcePath.split('/')
@@ -82,6 +91,12 @@ describe(baseUrl, () => {
       const thumbnails = generateThumbnails(2)
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(imageChecker.validate).toHaveBeenCalledWith(thumbnails)
+    })
+
+    it('passes session thumbnails to alt text generator', async () => {
+      const thumbnails = generateThumbnails(2)
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(altTextGenerator.generate).toHaveBeenCalledWith(thumbnails)
     })
 
     it('moves each image and thumbnail', async () => {
@@ -208,6 +223,28 @@ describe(baseUrl, () => {
       }]
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(getPayload().mediaUpload.images[0].metadata.fileType).toBe('')
+    })
+
+    it('includes generated alt text in payload', async () => {
+      const thumbnails = generateThumbnails(1)
+      altTextGenerator.generate.mockResolvedValue({
+        success: true,
+        skipped: false,
+        response: [{ altText: 'A close-up image of a damaged road sign', source: 'foundry' }]
+      })
+
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(getPayload().mediaUpload.images[0].altText).toBe('A close-up image of a damaged road sign')
+      expect(getPayload().mediaUpload.images[0].altTextSource).toBe('foundry')
+    })
+
+    it('uses null alt text and none source when alt text response is absent', async () => {
+      const thumbnails = generateThumbnails(1)
+      altTextGenerator.generate.mockResolvedValue({ success: true, skipped: false, response: [] })
+
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(getPayload().mediaUpload.images[0].altText).toBe(null)
+      expect(getPayload().mediaUpload.images[0].altTextSource).toBe('none')
     })
   })
 })
