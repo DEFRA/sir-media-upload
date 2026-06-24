@@ -1,5 +1,21 @@
 import { createServer, init } from "../server/index.js"
 import serverOptions from '../server/__test-helpers__/server-options.js'
+
+jest.mock('geodesy/osgridref.js', () => ({
+  LatLon: class {
+    constructor (lat, lon) {
+      this.lat = lat
+      this.lon = lon
+    }
+
+    toOsGrid () {
+      return {
+        toString: () => `NY${Math.round(this.lat)}${Math.round(this.lon)}`
+      }
+    }
+  }
+}))
+
 const ORIGINAL_ENV = process.env
 
 let server, context

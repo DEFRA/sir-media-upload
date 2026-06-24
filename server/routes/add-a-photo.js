@@ -6,6 +6,7 @@ import path from 'node:path'
 import dirname from '../../dirname.cjs'
 import { getUploadContainerClient } from '../services/blob-storage.js'
 import { fileMalwareCheck } from '../services/file-malware-checker.js'
+import { extractImageMetadata } from '../utils/image-metadata-helpers.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
@@ -171,6 +172,8 @@ async function handleFileUpload (request, uploadId) {
     throw err
   }
 
+  const { dateTaken, geotag } = await extractImageMetadata(fileBuffer)
+  console.log(`[Metadata] dateTaken: ${dateTaken}, geotag: ${geotag}`)
   const containerClient = await getUploadContainerClient()
   const originalName = path.parse(file.hapi.filename).name || 'upload'
   const originalExt = path.extname(file.hapi.filename).toLowerCase()
@@ -231,7 +234,9 @@ async function handleFileUpload (request, uploadId) {
     fileSizeBytes: convertedBuffer.length,
     aiCheckerImage,
     thumbnailBlobPath,
-    localThumbnailPath: localFilename
+    localThumbnailPath: localFilename,
+    dateTaken,
+    geotag
   }
 }
 
@@ -268,9 +273,9 @@ const handlers = {
     }
 
     try {
-      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localThumbnailPath } = await handleFileUpload(request, uploadId)
+      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localThumbnailPath, dateTaken, geotag } = await handleFileUpload(request, uploadId)
       const thumbLoc = `/public/thumbnails/${localThumbnailPath}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage })
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, dateTaken, geotag })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 
