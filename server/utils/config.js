@@ -43,7 +43,8 @@ const schema = Joi.object().keys({
   apimAIClientId: Joi.string().required(),
   apimAISecret: Joi.string().required(),
   apimAITenantId: Joi.string().required(),
-  apimAIEndpoint: Joi.string().required()
+  apimAIEndpoint: Joi.string().required(),
+  sirIdTesting: Joi.string().optional()
 })
 
 // Build config
@@ -70,7 +71,8 @@ const config = {
   apimAIClientId: process.env.APIM_AI_CLIENT_ID,
   apimAISecret: process.env.APIM_AI_SECRET,
   apimAITenantId: process.env.APIM_AI_TENANT_ID,
-  apimAIEndpoint: process.env.APIM_AI_ENDPOINT
+  apimAIEndpoint: process.env.APIM_AI_ENDPOINT,
+  sirIdTesting: process.env.SIR_ID_TESTING
 }
 
 // Validate config
