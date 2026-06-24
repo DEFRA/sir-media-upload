@@ -38,7 +38,12 @@ const schema = Joi.object().keys({
   storageAccessKey: Joi.string().optional(),
   smartIncidentReportingBaseUrl: Joi.string().required(),
   contentSafetyEndpoint: Joi.string().required(),
-  contentSafetyKey: Joi.string().required()
+  contentSafetyKey: Joi.string().required(),
+  apimAIScope: Joi.string().required(),
+  apimAIClientId: Joi.string().required(),
+  apimAISecret: Joi.string().required(),
+  apimAITenantId: Joi.string().required(),
+  apimAIEndpoint: Joi.string().required()
 })
 
 // Build config
@@ -60,7 +65,12 @@ const config = {
   storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
   smartIncidentReportingBaseUrl: updateBaseUrl(process.env.SMART_INCIDENT_REPORTING_BASE_URL),
   contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
-  contentSafetyKey: process.env.CONTENT_SAFETY_KEY
+  contentSafetyKey: process.env.CONTENT_SAFETY_KEY,
+  apimAIScope: process.env.APIM_AI_SCOPE,
+  apimAIClientId: process.env.APIM_AI_CLIENT_ID,
+  apimAISecret: process.env.APIM_AI_SECRET,
+  apimAITenantId: process.env.APIM_AI_TENANT_ID,
+  apimAIEndpoint: process.env.APIM_AI_ENDPOINT
 }
 
 // Validate config
