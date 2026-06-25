@@ -23,6 +23,7 @@ const mockValidPng = Buffer.from(
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024
 const UPLOAD_MAX_BYTES = 4 * 1024 * 1024
 const MAX_IMAGE_RESIZE_DEPTH = 5
+const MAX_IMAGE_DIMENSION = 7200
 
 const createForm = (filename = '', content = 'data', contentType = 'image/png') => {
   const form = new FormData()
@@ -390,6 +391,32 @@ describe(baseUrl, () => {
 
         const resizedResult = await addPhoto.convertImageSize(narrowOversizedImage, '.png')
         expect(resizedResult.buffer.length).toBeLessThanOrEqual(UPLOAD_MAX_BYTES)
+      })
+
+      it('scales down image dimensions when width exceeds max dimension', async () => {
+        const overDimensionImage = await createNoiseImageBuffer({
+          width: 9000,
+          height: 200,
+          format: 'png'
+        })
+
+        const resizedResult = await addPhoto.convertImageSize(overDimensionImage, '.png')
+        const metadata = await sharp(resizedResult.buffer).metadata()
+
+        expect(metadata.width).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
+      })
+
+      it('scales down image dimensions when height exceeds max dimension', async () => {
+        const overDimensionImage = await createNoiseImageBuffer({
+          width: 200,
+          height: 9000,
+          format: 'png'
+        })
+
+        const resizedResult = await addPhoto.convertImageSize(overDimensionImage, '.png')
+        const metadata = await sharp(resizedResult.buffer).metadata()
+
+        expect(metadata.height).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
       })
 
       it('exhausts quality levels then resizes and recurses for wide oversized image as jpg', async () => {

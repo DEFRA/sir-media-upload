@@ -11,6 +11,7 @@ import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnai
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
 const MIN_RESIZE_WIDTH = 320
+const MAX_IMAGE_DIMENSION = 7200
 const QUALITY_LEVELS = [80, 70, 60, 50, 40, 30]
 const RESIZE_WIDTH_RATIO = 0.8
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024 // 25MB
@@ -102,6 +103,23 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
     throw err
   }
 
+  const metadata = await sharp(fileBuffer).metadata()
+  const exceedsMaxDimension = (metadata.width && metadata.width > MAX_IMAGE_DIMENSION) ||
+    (metadata.height && metadata.height > MAX_IMAGE_DIMENSION)
+
+  if (exceedsMaxDimension) {
+    const scaledBuffer = await sharp(fileBuffer)
+      .resize({
+        width: MAX_IMAGE_DIMENSION,
+        height: MAX_IMAGE_DIMENSION,
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .toBuffer()
+
+    return convertImageSize(scaledBuffer, extension, depth + 1)
+  }
+
   const tryJpegQuality = async (index) => {
     if (index >= QUALITY_LEVELS.length) {
       return null
@@ -123,7 +141,6 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
     return qualityResult
   }
 
-  const metadata = await sharp(fileBuffer).metadata()
   if (!metadata.width || metadata.width <= MIN_RESIZE_WIDTH) {
     const fallbackBuffer = await sharp(fileBuffer).jpeg({ quality: 30 }).toBuffer()
 
