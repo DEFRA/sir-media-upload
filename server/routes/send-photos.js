@@ -46,8 +46,8 @@ const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
           metadata: {
             size: image.fileSizeBytes ? (image.fileSizeBytes / (1024 * 1024)).toFixed(2) : null,
             fileType: imageName.includes('.') ? imageName.split('.').pop().toLowerCase() : '',
-            dateTaken: image.dateTaken ?? null,
-            geotag: image.geotag ?? null
+            dateTaken: image.dateTaken ?? null, // check if can not display if null value
+            geotag: image.geotag ?? null // check if can not display if null value
           }
         }
       })
