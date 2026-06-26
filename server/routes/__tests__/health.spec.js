@@ -1,7 +1,6 @@
 import { submitGetRequest } from '../../__test-helpers__/server.js'
-import constants from '../../utils/constants.js'
 
-const url = constants.routes.HEALTH
+const url = '/health'
 
 describe(url, () => {
   describe('GET', () => {
