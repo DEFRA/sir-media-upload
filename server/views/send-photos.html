@@ -16,7 +16,7 @@
                 text: "You will not be able to add any photos after this point, and the link in your email will no longer work."
             }) }}
 
-            <p><a href="/your-photos{% if sirid %}?sirid={{ sirid }}{% endif %}">Add or remove photos</a></p>
+            <p><a href="{{ appPathPrefix }}/your-photos{% if sirid %}?sirid={{ sirid }}{% endif %}">Add or remove photos</a></p>
 
             {{ govukButton({
                 text: "Send photos"

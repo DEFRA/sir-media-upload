@@ -4,7 +4,6 @@ const urls = {
   GOV_UK_HOME: 'https://www.gov.uk'
 }
 
-const HOME = 'home'
 const PUBLIC = 'public'
 const UPLOAD_PHOTO = 'upload-photo'
 const ADD_A_PHOTO = 'add-a-photo'
@@ -16,7 +15,6 @@ const LINK_USED = 'link-used'
 const HEALTH = 'health'
 
 const views = {
-  HOME,
   PUBLIC,
   UPLOAD_PHOTO,
   ADD_A_PHOTO,

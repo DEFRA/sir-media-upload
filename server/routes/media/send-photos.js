@@ -98,7 +98,7 @@ const handlers = {
 
     const payload = buildPayload(sirid, movedImages, validationResult, uploadContainerClient.url)
     console.log('Payload to send to service bus', JSON.stringify(payload, null, 2))
-    await sendMessage(request.logger, payload)
+    // await sendMessage(request.logger, payload)
     const redirectUrl = `${constants.routes.SUCCESS}?sirid=${sirid}`
     return h.redirect(redirectUrl)
   }

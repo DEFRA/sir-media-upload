@@ -9,6 +9,7 @@ import sharp from 'sharp'
 import heicConvert from 'heic-convert'
 import * as addPhoto from '../media/add-a-photo.js'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
+import config from '../../utils/config.js'
 
 jest.mock('../../services/blob-storage.js', () => ({
   getUploadContainerClient: jest.fn()
@@ -322,7 +323,7 @@ describe(baseUrl, () => {
       const form = createForm('valid.png', mockValidPng, 'image/png')
       const thumbnails = Array.from({ length: 5 }, (_, index) => ({
         finalFilename: `upload-id/${index}.png`,
-        thumbLoc: `/public/thumbnails/upload-id-${index}.png`,
+        thumbLoc: `${config.appPathPrefix}/public/thumbnails/upload-id-${index}.png`,
         fileSizeBytes: 1024
       }))
       const response = await submitPostRequest({

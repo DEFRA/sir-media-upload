@@ -206,8 +206,9 @@ async function handleFileUpload (request, uploadId) {
     .resize({ width: 200 })
     .toBuffer()
 
+  const thumbnailName = `${originalName}-thumbnail${extension}`
   const finalFilename = `quarantine/${uploadId}/${originalName}${extension}`
-  const thumbnailBlobPath = `quarantine/${uploadId}/${originalName}-thumbnail${extension}`
+  const thumbnailBlobPath = `quarantine/${uploadId}/${thumbnailName}`
 
   // 6. Upload converted image and thumbnail to same container/folder
   await containerClient
@@ -219,19 +220,19 @@ async function handleFileUpload (request, uploadId) {
     .uploadData(thumbnail)
 
   // Save local thumbnail file
-  const localFilename = `${originalName}-thumbnail${extension}`
-  const thumbDir = path.join(dirname, 'server/public/build/thumbnails')
+  const thumbDir = path.join(dirname, `server/public/build/thumbnails/${uploadId}`)
   if (!fs.existsSync(thumbDir)) {
     fs.mkdirSync(thumbDir, { recursive: true })
   }
-  fs.writeFileSync(path.join(thumbDir, localFilename), thumbnail)
+  fs.writeFileSync(path.join(thumbDir, thumbnailName), thumbnail)
 
   return {
     finalFilename,
     fileSizeBytes: convertedBuffer.length,
     aiCheckerImage,
     thumbnailBlobPath,
-    localThumbnailPath: localFilename
+    localFilename: `${uploadId}/${thumbnailName}`,
+    localThumbnailDir: thumbDir
   }
 }
 
@@ -263,14 +264,15 @@ const handlers = {
     if (thumbnails.length >= MAX_SELECTED_FILES) {
       return h.view(constants.views.ADD_A_PHOTO, {
         maxSelectedFiles: true,
-        backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
+        backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`,
+        sirid
       })
     }
 
     try {
-      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localThumbnailPath } = await handleFileUpload(request, uploadId)
-      const thumbLoc = `/public/thumbnails/${localThumbnailPath}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage })
+      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localFilename, localThumbnailDir } = await handleFileUpload(request, uploadId)
+      const thumbLoc = `/public/thumbnails/${localFilename}`
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, localThumbnailDir })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 
