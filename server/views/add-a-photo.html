@@ -27,7 +27,7 @@
       <h1 class="govuk-heading-l">{{ pageTitle }}</h1>
       {% if maxSelectedFiles %}
         <p>You have added the maximum number of photos allowed</p>
-        <p><a href="{{ appPathPrefix }}/your-photos?sirid={{ sirid }}">See your photos</a></p>
+        <p><a href="{{ backLinkHref }}">See your photos</a></p>
       {% else %}
         <p>Add your photos one at a time.</p>
         <p>The photos must meet our <a href="{{ appPathPrefix }}/terms-for-uploading-photos" target="_blank" rel="noopener">terms for uploading photos</a></p>
