@@ -28,7 +28,7 @@
                     {{ photo.filename }}
                 </dt>
                 <dd class="govuk-summary-list__value">
-                    <img src="{{ photo.thumbLoc }}" alt="Uploaded thumbnail" style="width:100%;height:auto;">
+                    <img src="{{ appPathPrefix }}{{ photo.thumbLoc }}" alt="Uploaded thumbnail" style="width:100%;height:auto;">
                 </dd>
                 <dd class="govuk-summary-list__actions vertical-align-top">
                     <form method="post" action="#" style="display:inline;">
@@ -42,14 +42,14 @@
 
         {% if remainingPhotos > 0 %}
             <p class="govuk-body">
-                <a class="govuk-link" href="/add-a-photo?sirid={{ sirid }}">{% if remainingPhotos == 5 %}Add a photo{% else %}Add another photo{% endif %}</a>
+                <a class="govuk-link" href="{{ appPathPrefix }}/add-a-photo?sirid={{ sirid }}">{% if remainingPhotos == 5 %}Add a photo{% else %}Add another photo{% endif %}</a>
             </p>
         {% endif %}
 
         {% if remainingPhotos < 5 %}
             {{ govukButton({
                 text: "Continue",
-                href: "/send-photos?sirid=" + sirid
+                href: appPathPrefix + "/send-photos?sirid=" + sirid
             }) }}
         {% endif %}
     </div>
