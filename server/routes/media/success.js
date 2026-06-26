@@ -17,8 +17,15 @@ const handlers = {
       try {
         const localThumbnailDir = thumbnail.localThumbnailDir
         if (fs.existsSync(localThumbnailDir)) {
+          console.log('\n-----------------------')
+          console.log(`Deleting local thumbnail directory: ${localThumbnailDir}`)
+          console.log('-----------------------\n')
           fs.rmSync(localThumbnailDir, { recursive: true })
         }
+        console.log('\n-----------------------')
+        console.log(`NOT deleting local thumbnail directory: ${localThumbnailDir}`)
+        console.log('it doesnt exist')
+        console.log('-----------------------\n')
       } catch (err) {
         console.error('Local thumbnail deletion failed', {
           dir: thumbnail.localThumbnailDir,
