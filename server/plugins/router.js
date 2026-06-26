@@ -3,6 +3,7 @@ import constants from '../utils/constants.js'
 const router = async () => {
   const allRoutes = constants.routes
   allRoutes.HEALTH = '/health'
+  allRoutes.HOME = '/'
 
   const routes = [].concat(
     ...await Promise.all(Object.values(allRoutes).map(async route => (await import(`../routes/${route}.js`)).default))
