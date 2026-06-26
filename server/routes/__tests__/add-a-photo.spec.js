@@ -7,8 +7,9 @@ import path from 'node:path'
 import FormData from 'form-data'
 import sharp from 'sharp'
 import heicConvert from 'heic-convert'
-import * as addPhoto from '../add-a-photo.js'
+import * as addPhoto from '../media/add-a-photo.js'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
+import config from '../../utils/config.js'
 
 jest.mock('../../services/blob-storage.js', () => ({
   getUploadContainerClient: jest.fn()
@@ -79,6 +80,12 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
     it('should render back link to your photos instead of browser history', async () => {
       const response = await submitGetRequest({ url }, header)
       expect(response.result).toContain(`href="${constants.routes.YOUR_PHOTOS}?sirid=test-session-id"`)
@@ -130,6 +137,18 @@ describe(baseUrl, () => {
       }, constants.statusCodes.REDIRECT)
 
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const form = createForm('valid.png', mockValidPng, 'image/png')
+      const response = await submitPostRequest({
+        url,
+        payload: form.getBuffer(),
+        headers: form.getHeaders()
+      }, constants.statusCodes.REDIRECT)
+
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
     })
 
     describe('file type', () => {
@@ -323,7 +342,7 @@ describe(baseUrl, () => {
       const form = createForm('valid.png', mockValidPng, 'image/png')
       const thumbnails = Array.from({ length: 5 }, (_, index) => ({
         finalFilename: `upload-id/${index}.png`,
-        thumbLoc: `/public/thumbnails/upload-id-${index}.png`,
+        thumbLoc: `${config.appPathPrefix}/public/thumbnails/upload-id-${index}.png`,
         fileSizeBytes: 1024
       }))
       const response = await submitPostRequest({

@@ -6,6 +6,16 @@ const defaultRedisPort = 6379
 const getBoolean = booleanString =>
   String(booleanString).toLowerCase() === 'true'
 
+export const updateBaseUrl = urlString => {
+  const value = String(urlString)
+
+  if (value.startsWith('https://') || value.startsWith('http://')) {
+    return value
+  }
+
+  return `https://${value}`
+}
+
 // Define config schema
 const schema = Joi.object().keys({
   env: Joi
@@ -28,7 +38,8 @@ const schema = Joi.object().keys({
   storageAccessKey: Joi.string().optional(),
   smartIncidentReportingBaseUrl: Joi.string().required(),
   contentSafetyEndpoint: Joi.string().required(),
-  contentSafetyKey: Joi.string().required()
+  contentSafetyKey: Joi.string().required(),
+  appPathPrefix: Joi.string().default('/media')
 })
 
 // Build config
@@ -48,9 +59,10 @@ const config = {
   blobServiceUrl: process.env.AZURE_BLOB_SERVICE_URL,
   storageAccount: process.env.AZURE_STORAGE_ACCOUNT,
   storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
-  smartIncidentReportingBaseUrl: process.env.SMART_INCIDENT_REPORTING_BASE_URL,
+  smartIncidentReportingBaseUrl: updateBaseUrl(process.env.SMART_INCIDENT_REPORTING_BASE_URL),
   contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
-  contentSafetyKey: process.env.CONTENT_SAFETY_KEY
+  contentSafetyKey: process.env.CONTENT_SAFETY_KEY,
+  appPathPrefix: process.env.APP_PATH_PREFIX
 }
 
 // Validate config

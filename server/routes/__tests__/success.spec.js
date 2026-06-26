@@ -1,8 +1,9 @@
 import { submitGetRequest } from '../../__test-helpers__/server.js'
 import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
-import successRoute from '../success.js'
+import successRoute from '../media/success.js'
 import fs from 'node:fs'
+import config from '../../utils/config.js'
 
 const baseUrl = constants.routes.SUCCESS
 const url = `${baseUrl}?sirid=test-session-id`
@@ -16,6 +17,12 @@ describe(baseUrl, () => {
     it('should redirect to link-used when sirid is missing', async () => {
       const response = await submitGetRequest({ url: baseUrl }, null, constants.statusCodes.REDIRECT)
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
     })
 
     it(`Should return success response and correct view for ${baseUrl}`, async () => {
@@ -54,7 +61,7 @@ describe(baseUrl, () => {
             if (key === 'existing-uploads') {
               return {
                 'test-session-id': {
-                  thumbnails: [{ finalFilename: 'test.jpg', thumbLoc: '/public/thumbnails/test.jpg' }]
+                  thumbnails: [{ finalFilename: 'test.jpg', thumbLoc: `${config.appPathPrefix}/public/thumbnails/test.jpg` }]
                 }
               }
             }

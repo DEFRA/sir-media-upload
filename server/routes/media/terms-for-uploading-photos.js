@@ -1,4 +1,4 @@
-import constants from '../utils/constants.js'
+import constants from '../../utils/constants.js'
 
 const handlers = {
   get: (_request, h) => {

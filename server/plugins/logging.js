@@ -11,8 +11,8 @@ export default {
       remove: true
     },
     ignorePaths: [
-      '/public/build/stylesheets/application.css',
-      '/public/build/thumbnails/'
+      `${config.appPathPrefix}/build/stylesheets/application.css`,
+      `${config.appPathPrefix}/build/thumbnails/`
     ]
   }
 }

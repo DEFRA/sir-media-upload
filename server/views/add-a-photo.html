@@ -30,7 +30,7 @@
         <p><a href="{{ backLinkHref }}">See your photos</a></p>
       {% else %}
         <p>Add your photos one at a time.</p>
-        <p>The photos must meet our <a href="/terms-for-uploading-photos" target="_blank" rel="noopener">terms for uploading photos</a></p>
+        <p>The photos must meet our <a href="{{ appPathPrefix }}/terms-for-uploading-photos" target="_blank" rel="noopener">terms for uploading photos</a></p>
           {% if errorMessage %}
             {{ govukFileUpload({
               id: "file-upload-1",

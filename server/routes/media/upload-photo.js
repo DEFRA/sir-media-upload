@@ -1,11 +1,12 @@
-import constants from '../utils/constants.js'
-import { returnFormattedDate } from '../utils/date-helpers.js'
-import { addSirIdToSession, addSirIdToQueryString, hasValidSirId } from '../utils/upload-session-helpers.js'
+import constants from '../../utils/constants.js'
+import { returnFormattedDate } from '../../utils/date-helpers.js'
+import { addSirIdToSession, addSirIdToQueryString, hasValidSirId } from '../../utils/upload-session-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     const sirid = addSirIdToSession(request)
@@ -22,7 +23,8 @@ const handlers = {
   },
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     const redirectUrl = addSirIdToQueryString(request, constants.routes.ADD_A_PHOTO)
