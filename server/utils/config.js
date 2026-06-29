@@ -38,7 +38,8 @@ const schema = Joi.object().keys({
   storageAccessKey: Joi.string().optional(),
   smartIncidentReportingBaseUrl: Joi.string().required(),
   contentSafetyEndpoint: Joi.string().required(),
-  contentSafetyKey: Joi.string().required()
+  contentSafetyKey: Joi.string().required(),
+  appPathPrefix: Joi.string().default('/media')
 })
 
 // Build config
@@ -60,7 +61,8 @@ const config = {
   storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
   smartIncidentReportingBaseUrl: updateBaseUrl(process.env.SMART_INCIDENT_REPORTING_BASE_URL),
   contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
-  contentSafetyKey: process.env.CONTENT_SAFETY_KEY
+  contentSafetyKey: process.env.CONTENT_SAFETY_KEY,
+  appPathPrefix: process.env.APP_PATH_PREFIX
 }
 
 // Validate config

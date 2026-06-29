@@ -1,8 +1,9 @@
 import { submitGetRequest } from '../../__test-helpers__/server.js'
 import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
-import successRoute from '../success.js'
+import successRoute from '../media/success.js'
 import fs from 'node:fs'
+import config from '../../utils/config.js'
 
 const baseUrl = constants.routes.SUCCESS
 const url = `${baseUrl}?sirid=test-session-id`
@@ -68,7 +69,7 @@ describe(baseUrl, () => {
             if (key === 'existing-uploads') {
               return {
                 'test-session-id': {
-                  thumbnails: [{ finalFilename: 'test.jpg', thumbLoc: '/public/thumbnails/test.jpg' }]
+                  thumbnails: [{ finalFilename: 'test.jpg', thumbLoc: `${config.appPathPrefix}/public/thumbnails/test.jpg` }]
                 }
               }
             }

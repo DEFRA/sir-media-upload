@@ -1,6 +1,8 @@
+import config from '../../utils/config.js'
+
 export default [{
   method: 'GET',
-  path: '/robots.txt',
+  path: `${config.appPathPrefix}/robots.txt`,
   handler: {
     file: 'server/public/static/robots.txt'
   },
@@ -9,7 +11,7 @@ export default [{
   }
 }, {
   method: 'GET',
-  path: '/public/all.js',
+  path: `${config.appPathPrefix}/public/all.js`,
   handler: {
     file: 'node_modules/govuk-frontend/dist/govuk/all.js'
   },
@@ -19,7 +21,7 @@ export default [{
 },
 {
   method: 'GET',
-  path: '/public/{path*}',
+  path: `${config.appPathPrefix}/public/{path*}`,
   handler: {
     directory: {
       path: [
