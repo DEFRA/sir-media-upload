@@ -21,7 +21,8 @@ jest.mock('../../utils/config.js', () => ({
   default: {
     blobServiceUrl: 'https://blob-storage-url',
     storageAccount: 'test-account',
-    storageAccessKey: undefined
+    storageAccessKey: undefined,
+    appPathPrefix: '/media'
   }
 }))
 

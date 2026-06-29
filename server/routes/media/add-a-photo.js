@@ -92,8 +92,14 @@ export async function convertImageType (fileBuffer, file) {
   }
 }
 
-export async function convertImageSize (fileBuffer, extension, depth = 0) {
-  if (fileBuffer.length <= UPLOAD_MAX_BYTES) {
+export async function convertImageSize (fileBuffer, extension, depth = 0, metadata = null, exceedsMaxDimension = null) {
+  const imageMetadata = metadata || await sharp(fileBuffer).metadata()
+  const imageExceedsMaxDimension = exceedsMaxDimension ?? (
+    (imageMetadata.width && imageMetadata.width > MAX_IMAGE_DIMENSION) ||
+    (imageMetadata.height && imageMetadata.height > MAX_IMAGE_DIMENSION)
+  )
+
+  if (fileBuffer.length <= UPLOAD_MAX_BYTES && !imageExceedsMaxDimension) {
     return { buffer: fileBuffer, extension }
   }
 
@@ -103,11 +109,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
     throw err
   }
 
-  const metadata = await sharp(fileBuffer).metadata()
-  const exceedsMaxDimension = (metadata.width && metadata.width > MAX_IMAGE_DIMENSION) ||
-    (metadata.height && metadata.height > MAX_IMAGE_DIMENSION)
-
-  if (exceedsMaxDimension) {
+  if (imageExceedsMaxDimension) {
     const scaledBuffer = await sharp(fileBuffer)
       .resize({
         width: MAX_IMAGE_DIMENSION,
@@ -141,7 +143,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
     return qualityResult
   }
 
-  if (!metadata.width || metadata.width <= MIN_RESIZE_WIDTH) {
+  if (!imageMetadata.width || imageMetadata.width <= MIN_RESIZE_WIDTH) {
     const fallbackBuffer = await sharp(fileBuffer).jpeg({ quality: 30 }).toBuffer()
 
     if (fallbackBuffer.length > UPLOAD_MAX_BYTES) {
@@ -155,7 +157,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
 
   const resizedBuffer = await sharp(fileBuffer)
     .resize({
-      width: Math.max(MIN_RESIZE_WIDTH, Math.floor(metadata.width * RESIZE_WIDTH_RATIO)),
+      width: Math.max(MIN_RESIZE_WIDTH, Math.floor(imageMetadata.width * RESIZE_WIDTH_RATIO)),
       withoutEnlargement: true
     })
     .jpeg({ quality: 30 })
@@ -213,9 +215,12 @@ async function handleFileUpload (request, uploadId) {
   // 3. Convert image type
   const { buffer: convertedBuffer, extension } = await convertImageType(fileBuffer, file)
 
-  // 4. Check 4MB size and store in session if needed
-  const aiCheckerImage = convertedBuffer.length > UPLOAD_MAX_BYTES
-    ? (await convertImageSize(convertedBuffer, extension)).buffer.toString('base64')
+  // 4. Check 4MB size or max dimensions and store in session if needed
+  const metadata = await sharp(convertedBuffer).metadata()
+  const exceedsMaxDimension = (metadata.width && metadata.width > MAX_IMAGE_DIMENSION) ||
+    (metadata.height && metadata.height > MAX_IMAGE_DIMENSION)
+  const aiCheckerImage = (convertedBuffer.length > UPLOAD_MAX_BYTES || exceedsMaxDimension)
+    ? (await convertImageSize(convertedBuffer, extension, 0, metadata, exceedsMaxDimension)).buffer.toString('base64')
     : null
 
   // 5. Create thumbnail from converted image

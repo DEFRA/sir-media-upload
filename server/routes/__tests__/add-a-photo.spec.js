@@ -386,12 +386,18 @@ describe(baseUrl, () => {
 
       it('should throw FILE_TOO_LARGE at max processing depth when still oversized', async () => {
         const oversizedBuffer = Buffer.alloc(UPLOAD_MAX_BYTES + 1)
-        await expect(addPhoto.convertImageSize(oversizedBuffer, '.png', MAX_IMAGE_RESIZE_DEPTH)).rejects.toMatchObject({
+        await expect(addPhoto.convertImageSize(
+          oversizedBuffer,
+          '.png',
+          MAX_IMAGE_RESIZE_DEPTH,
+          { width: 2000, height: 2000 },
+          false
+        )).rejects.toMatchObject({
           code: 'FILE_TOO_LARGE'
         })
       })
 
-      it('processes very tall narrow image and returns jpg extension', async () => {
+      it('processes very tall narrow image within max dimension limit', async () => {
         const narrowOversizedImage = await createNoiseImageBuffer({
           width: 320,
           height: 30000,
@@ -399,7 +405,9 @@ describe(baseUrl, () => {
         })
 
         const resizedResult = await addPhoto.convertImageSize(narrowOversizedImage, '.png')
-        expect(resizedResult.extension).toBe('.jpg')
+        const metadata = await sharp(resizedResult.buffer).metadata()
+
+        expect(metadata.height).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
       })
 
       it('processes very tall narrow image within upload limit', async () => {
@@ -426,6 +434,30 @@ describe(baseUrl, () => {
         expect(metadata.width).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
       })
 
+      it('scales down width when exceedsMaxDimension is under upload limit', async () => {
+        const overDimensionImage = await sharp({
+          create: {
+            width: 9000,
+            height: 200,
+            channels: 3,
+            background: { r: 255, g: 255, b: 255 }
+          }
+        }).png().toBuffer()
+
+        expect(overDimensionImage.length).toBeLessThanOrEqual(UPLOAD_MAX_BYTES)
+
+        const resizedResult = await addPhoto.convertImageSize(
+          overDimensionImage,
+          '.png',
+          0,
+          { width: 9000, height: 200 },
+          true
+        )
+        const metadata = await sharp(resizedResult.buffer).metadata()
+
+        expect(metadata.width).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
+      })
+
       it('scales down image dimensions when height exceeds max dimension', async () => {
         const overDimensionImage = await createNoiseImageBuffer({
           width: 200,
@@ -437,6 +469,26 @@ describe(baseUrl, () => {
         const metadata = await sharp(resizedResult.buffer).metadata()
 
         expect(metadata.height).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
+      })
+
+      it('uses provided metadata without re-reading metadata on initial call', async () => {
+        const oversizedResizableImage = await createNoiseImageBuffer({
+          width: 2400,
+          height: 2000,
+          format: 'png'
+        })
+
+        const metadataSpy = jest.spyOn(sharp.prototype, 'metadata')
+
+        await addPhoto.convertImageSize(
+          oversizedResizableImage,
+          '.png',
+          0,
+          { width: 2400, height: 2000 },
+          false
+        )
+
+        expect(metadataSpy).not.toHaveBeenCalled()
       })
 
       it('exhausts quality levels then resizes and recurses for wide oversized image as jpg', async () => {
