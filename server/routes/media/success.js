@@ -1,7 +1,7 @@
 import constants from '../../utils/constants.js'
 import fs from 'node:fs'
-import path from 'node:path'
-import dirname from '../../../dirname.cjs'
+// import path from 'node:path'
+// import dirname from '../../../dirname.cjs'
 import { hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId, markSirIdAsSubmitted, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
 
 const handlers = {
