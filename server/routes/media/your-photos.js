@@ -1,16 +1,17 @@
-import constants from '../utils/constants.js'
+import constants from '../../utils/constants.js'
 import fs from 'node:fs'
 import path from 'node:path'
-import dirname from '../../dirname.cjs'
-import { getUploadContainerClient } from '../services/blob-storage.js'
-import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, removeThumbnailFromSession } from '../utils/upload-session-helpers.js'
+import dirname from '../../../dirname.cjs'
+import { getUploadContainerClient } from '../../services/blob-storage.js'
+import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, removeThumbnailFromSession } from '../../utils/upload-session-helpers.js'
 
 const MAX_PHOTOS = 5
 
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     const { sirid } = request.query
@@ -30,7 +31,8 @@ const handlers = {
 
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     const imageIndex = Number.parseInt(request.payload.imageIndex, 10)

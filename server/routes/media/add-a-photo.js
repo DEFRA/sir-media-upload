@@ -1,12 +1,12 @@
-import constants from '../utils/constants.js'
+import constants from '../../utils/constants.js'
 import sharp from 'sharp'
 import heicConvert from 'heic-convert'
 import fs from 'node:fs'
 import path from 'node:path'
-import dirname from '../../dirname.cjs'
-import { getUploadContainerClient } from '../services/blob-storage.js'
-import { fileMalwareCheck } from '../services/file-malware-checker.js'
-import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../utils/upload-session-helpers.js'
+import dirname from '../../../dirname.cjs'
+import { getUploadContainerClient } from '../../services/blob-storage.js'
+import { fileMalwareCheck } from '../../services/file-malware-checker.js'
+import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
@@ -229,52 +229,60 @@ async function handleFileUpload (request, uploadId) {
   // Save local thumbnail file
   const uniqueBaseName = finalFilename.split('/').pop().replace(extension, '')
   const localFilename = `${uniqueBaseName}-thumbnail${extension}`
-  const thumbDir = path.join(dirname, 'server/public/build/thumbnails')
+  const thumbDir = path.join(dirname, `server/public/build/thumbnails/${uploadId}`)
   if (!fs.existsSync(thumbDir)) {
     fs.mkdirSync(thumbDir, { recursive: true })
   }
-  fs.writeFileSync(path.join(thumbDir, localFilename), thumbnail)
+  fs.writeFileSync(path.join(thumbDir, thumbnailName), thumbnail)
 
   return {
     finalFilename,
     fileSizeBytes: convertedBuffer.length,
     aiCheckerImage,
     thumbnailBlobPath,
-    localThumbnailPath: localFilename
+    localFilename: `${uploadId}/${thumbnailName}`,
+    localThumbnailDir: thumbDir
   }
 }
 
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
+    const { sirid } = request.query
+    const thumbnails = getThumbnailsBySirId(request)
+
     return h.view(constants.views.ADD_A_PHOTO, {
-      maxSelectedFiles: false,
-      backLinkHref: constants.routes.YOUR_PHOTOS
+      maxSelectedFiles: thumbnails.length >= MAX_SELECTED_FILES,
+      backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
     })
   },
 
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      return h.redirect(constants.routes.LINK_USED)
+      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      return h.redirect(redirectUrl)
     }
 
     const uploadId = request.query.sirid
+    const { sirid } = request.query
     const thumbnails = getThumbnailsBySirId(request)
 
     if (thumbnails.length >= MAX_SELECTED_FILES) {
       return h.view(constants.views.ADD_A_PHOTO, {
         maxSelectedFiles: true,
-        backLinkHref: constants.routes.YOUR_PHOTOS
+        backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`,
+        sirid
       })
     }
 
     try {
-      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localThumbnailPath } = await handleFileUpload(request, uploadId)
-      const thumbLoc = `/public/thumbnails/${localThumbnailPath}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage })
+      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localFilename, localThumbnailDir } = await handleFileUpload(request, uploadId)
+      const thumbLoc = `/public/thumbnails/${localFilename}`
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, localThumbnailDir })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 
@@ -285,35 +293,35 @@ const handlers = {
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'Select a file',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 
         case 'INVALID_IMAGE':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'Select a file in a different image format, for example JPEG or PNG',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 
         case 'FILE_TOO_LARGE':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file must be smaller than 4MB',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 
         case 'MALWARE_DETECTED':
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file contains a virus',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 
         default:
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file could not be uploaded – try again',
-            backLinkHref: constants.routes.YOUR_PHOTOS
+            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
       }
     }
@@ -341,7 +349,8 @@ export default [
         maxBytes: PAYLOAD_MAX_BYTES,
         failAction: (request, h, err) => {
           if (err?.output?.statusCode === 413) {
-            return maximumFileSizeExceeded(h).takeover()
+            const { sirid } = request.query
+            return maximumFileSizeExceeded(h, sirid).takeover()
           }
           throw err
         }
@@ -350,10 +359,10 @@ export default [
   }
 ]
 
-const maximumFileSizeExceeded = (h) => {
+const maximumFileSizeExceeded = (h, sirid) => {
   return h.view(constants.views.ADD_A_PHOTO, {
     maxSelectedFiles: false,
     errorMessage: 'The selected file must be smaller than 25MB',
-    backLinkHref: constants.routes.YOUR_PHOTOS
+    backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
   })
 }

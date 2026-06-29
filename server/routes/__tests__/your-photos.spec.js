@@ -3,6 +3,7 @@ import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
 import fs from 'node:fs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
+import config from '../../utils/config.js'
 
 jest.mock('../../services/blob-storage.js', () => ({
   getUploadContainerClient: jest.fn()
@@ -26,11 +27,11 @@ const getUpdatedThumbnails = (response, sirid = 'test-session-id') => {
 const mockThumbnails = [
   {
     finalFilename: 'upload-id/photo1.png',
-    thumbLoc: '/public/thumbnails/upload-id-0.png'
+    thumbLoc: `${config.appPathPrefix}/public/thumbnails/upload-id-0.png`
   },
   {
     finalFilename: 'upload-id/photo2.jpg',
-    thumbLoc: '/public/thumbnails/upload-id-1.jpg'
+    thumbLoc: `${config.appPathPrefix}/public/thumbnails/upload-id-1.jpg`
   }
 ]
 
@@ -67,6 +68,12 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+    })
+
     it('should display correct header', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(response.payload).toContain('<h1 class="govuk-heading-l">Your photos</h1>')
@@ -88,7 +95,7 @@ describe(baseUrl, () => {
     it('should show singular "photo" when remainingPhotos is 1', async () => {
       const thumbnails = Array.from({ length: 4 }, (_, index) => ({
         finalFilename: `upload-id/photo${index}.png`,
-        thumbLoc: `/public/thumbnails/upload-id-${index}.png`
+        thumbLoc: `${config.appPathPrefix}/public/thumbnails/upload-id-${index}.png`
       }))
 
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
@@ -100,7 +107,7 @@ describe(baseUrl, () => {
     it('should show correct message when max photos reached (remainingPhotos = 0)', async () => {
       const thumbnails = Array.from({ length: 5 }, (_, index) => ({
         finalFilename: `upload-id/photo${index}.png`,
-        thumbLoc: `/public/thumbnails/upload-id-${index}.png`
+        thumbLoc: `${config.appPathPrefix}/public/thumbnails/upload-id-${index}.png`
       }))
 
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
@@ -115,14 +122,14 @@ describe(baseUrl, () => {
       })
       expect(response.payload).toContain('photo1.png')
       expect(response.payload).toContain('photo2.jpg')
-      expect(response.payload).toContain('/public/thumbnails/upload-id-0.png')
-      expect(response.payload).toContain('/public/thumbnails/upload-id-1.jpg')
+      expect(response.payload).toContain(`${config.appPathPrefix}/public/thumbnails/upload-id-0.png`)
+      expect(response.payload).toContain(`${config.appPathPrefix}/public/thumbnails/upload-id-1.jpg`)
     })
 
     it('should show "Add a photo" link when no photos added', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {})
       expect(response.payload).toContain('Add a photo')
-      expect(response.payload).toContain('href="/add-a-photo?sirid=test-session-id"')
+      expect(response.payload).toContain(`href="${config.appPathPrefix}/add-a-photo?sirid=test-session-id"`)
     })
 
     it('should show "Add another photo" link when some photos added', async () => {
@@ -130,13 +137,13 @@ describe(baseUrl, () => {
         'existing-uploads': { 'test-session-id': { thumbnails: mockThumbnails } }
       })
       expect(response.payload).toContain('Add another photo')
-      expect(response.payload).toContain('href="/add-a-photo?sirid=test-session-id"')
+      expect(response.payload).toContain(`href="${config.appPathPrefix}/add-a-photo?sirid=test-session-id"`)
     })
 
     it('should not show add photo link when max photos reached', async () => {
       const thumbnails = Array.from({ length: 5 }, (_, index) => ({
         finalFilename: `upload-id/photo${index}.png`,
-        thumbLoc: `/public/thumbnails/upload-id-${index}.png`
+        thumbLoc: `${config.appPathPrefix}/public/thumbnails/upload-id-${index}.png`
       }))
 
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
@@ -155,12 +162,12 @@ describe(baseUrl, () => {
 
     it('should not show Continue button when no photos exist', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
-      expect(response.payload).not.toContain('href="/send-photos"')
+      expect(response.payload).not.toContain(`href="${config.appPathPrefix}/send-photos"`)
     })
 
     it('should render back link to add-a-photo instead of browser history', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
-      expect(response.payload).toContain('href="/add-a-photo?sirid=test-session-id"')
+      expect(response.payload).toContain(`href="${config.appPathPrefix}/add-a-photo?sirid=test-session-id"`)
     })
 
     it('should show Remove button for each photo', async () => {
@@ -190,6 +197,16 @@ describe(baseUrl, () => {
       }, constants.statusCodes.REDIRECT)
 
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
+    })
+
+    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
+      const response = await submitPostRequest({
+        url,
+        payload: { imageIndex: '0' }
+      }, constants.statusCodes.REDIRECT)
+
+      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
     })
 
     it('should redirect to YOUR_PHOTOS after removing a photo', async () => {
@@ -236,7 +253,7 @@ describe(baseUrl, () => {
       const thumbnails = [{
         finalFilename: 'upload-id/photo1.png',
         thumbnailBlobPath: 'thumbnails/upload-id/photo1-thumb.png',
-        thumbLoc: '/public/thumbnails/upload-id-0.png'
+        thumbLoc: `${config.appPathPrefix}/public/thumbnails/upload-id-0.png`
       }]
       const mockGetBlockBlobClient = jest.fn().mockReturnValue({ deleteIfExists: state.mockDeleteIfExists })
       getUploadContainerClient.mockResolvedValue({ getBlockBlobClient: mockGetBlockBlobClient })
