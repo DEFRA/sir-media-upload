@@ -44,7 +44,8 @@ const schema = Joi.object().keys({
   apimAISecret: Joi.string().required(),
   apimAITenantId: Joi.string().required(),
   apimAIEndpoint: Joi.string().required(),
-  sirIdTesting: Joi.string().optional()
+  sirIdTesting: Joi.string().optional(),
+  appPathPrefix: Joi.string().default('/media')
 })
 
 // Build config
@@ -72,7 +73,8 @@ const config = {
   apimAISecret: process.env.APIM_AI_SECRET,
   apimAITenantId: process.env.APIM_AI_TENANT_ID,
   apimAIEndpoint: process.env.APIM_AI_ENDPOINT,
-  sirIdTesting: process.env.SIR_ID_TESTING
+  sirIdTesting: process.env.SIR_ID_TESTING,
+  appPathPrefix: process.env.APP_PATH_PREFIX
 }
 
 // Validate config

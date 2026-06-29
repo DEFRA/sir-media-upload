@@ -1,8 +1,8 @@
-import constants from '../utils/constants.js'
+import constants from '../../utils/constants.js'
 import fs from 'node:fs'
-import path from 'node:path'
-import dirname from '../../dirname.cjs'
-import { addSirIdToQueryString, hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId } from '../utils/upload-session-helpers.js'
+// import path from 'node:path'
+// import dirname from '../../../dirname.cjs'
+import { addSirIdToQueryString, hasValidSirId, removeSirIdFromSession, getThumbnailsBySirId } from '../../utils/upload-session-helpers.js'
 
 const handlers = {
   get: async (request, h) => {
@@ -15,14 +15,14 @@ const handlers = {
     const thumbnails = getThumbnailsBySirId(request)
     thumbnails.forEach((thumbnail) => {
       try {
-        const localThumbPath = path.join(dirname, 'server/public/build', thumbnail.thumbLoc.replace(/^\//, ''))
-        if (fs.existsSync(localThumbPath)) {
-          fs.unlinkSync(localThumbPath)
+        const localThumbnailDir = thumbnail.localThumbnailDir
+        if (fs.existsSync(localThumbnailDir)) {
+          fs.rmSync(localThumbnailDir, { recursive: true })
         }
       } catch (err) {
         console.error('Local thumbnail deletion failed', {
+          dir: thumbnail.localThumbnailDir,
           sirid,
-          finalFilename: thumbnail?.finalFilename,
           err
         })
       }
