@@ -228,7 +228,7 @@ async function handleFileUpload (request, uploadId) {
 
   // Save local thumbnail file
   const uniqueBaseName = finalFilename.split('/').pop().replace(extension, '')
-  const localFilename = `${uniqueBaseName}-thumbnail${extension}`
+  const thumbnailName = `${uniqueBaseName}-thumbnail${extension}`
   const thumbDir = path.join(dirname, `server/public/build/thumbnails/${uploadId}`)
   if (!fs.existsSync(thumbDir)) {
     fs.mkdirSync(thumbDir, { recursive: true })
