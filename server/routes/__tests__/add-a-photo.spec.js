@@ -681,6 +681,95 @@ describe(baseUrl, () => {
       })
     })
 
+    describe('metadata extraction', () => {
+      beforeEach(() => {
+        jest.spyOn(addPhoto, 'streamToBuffer').mockResolvedValue(mockValidPng)
+      })
+
+      it('should store extracted date metadata in session', async () => {
+        jest.spyOn(addPhoto, 'convertImageType').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
+        jest.spyOn(addPhoto, 'convertImageSize').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: () => ({
+            uploadData: () => Promise.resolve(),
+            downloadToBuffer: () => Promise.resolve(mockValidPng),
+            getTags: () => Promise.resolve({ tags: { 'Malware Scanning scan result': 'No threats found' } }),
+            deleteIfExists: () => Promise.resolve({ succeeded: true })
+          })
+        })
+
+        jest.spyOn(addPhoto, 'pollForScanTag').mockResolvedValue({ 'Malware Scanning scan result': 'No threats found' })
+        jest.spyOn(addPhoto, 'convertImageSize').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
+
+        const form = createForm('photo.png', mockValidPng, 'image/png')
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, constants.statusCodes.REDIRECT)
+
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+        expect(thumbnails[0]).toHaveProperty('dateTaken')
+      })
+
+      it('should store extracted GPS metadata in session', async () => {
+        jest.spyOn(addPhoto, 'convertImageType').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
+        jest.spyOn(addPhoto, 'convertImageSize').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: () => ({
+            uploadData: () => Promise.resolve(),
+            downloadToBuffer: () => Promise.resolve(mockValidPng),
+            getTags: () => Promise.resolve({ tags: { 'Malware Scanning scan result': 'No threats found' } }),
+            deleteIfExists: () => Promise.resolve({ succeeded: true })
+          })
+        })
+
+        jest.spyOn(addPhoto, 'pollForScanTag').mockResolvedValue({ 'Malware Scanning scan result': 'No threats found' })
+
+        const form = createForm('photo.png', mockValidPng, 'image/png')
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, constants.statusCodes.REDIRECT)
+
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+        expect(thumbnails[0]).toHaveProperty('geotag')
+      })
+
+      it('should store null values when metadata not available', async () => {
+        jest.spyOn(addPhoto, 'convertImageType').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
+        jest.spyOn(addPhoto, 'convertImageSize').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
+
+        getUploadContainerClient.mockResolvedValue({
+          getBlockBlobClient: () => ({
+            uploadData: () => Promise.resolve(),
+            downloadToBuffer: () => Promise.resolve(mockValidPng),
+            getTags: () => Promise.resolve({ tags: { 'Malware Scanning scan result': 'No threats found' } }),
+            deleteIfExists: () => Promise.resolve({ succeeded: true })
+          })
+        })
+
+        jest.spyOn(addPhoto, 'pollForScanTag').mockResolvedValue({ 'Malware Scanning scan result': 'No threats found' })
+
+        const form = createForm('photo-no-metadata.png', mockValidPng, 'image/png')
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, constants.statusCodes.REDIRECT)
+
+        const existingUploads = response.request.yar.get('existing-uploads')
+        const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+        expect(thumbnails[0].dateTaken).toBeNull()
+        expect(thumbnails[0].geotag).toBeNull()
+      })
+    })
+
     describe('malware detection', () => {
       beforeEach(() => {
         jest.spyOn(addPhoto, 'streamToBuffer').mockResolvedValue(mockValidPng)

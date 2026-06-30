@@ -6,6 +6,7 @@ import path from 'node:path'
 import dirname from '../../../dirname.cjs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
 import { fileMalwareCheck } from '../../services/file-malware-checker.js'
+import { extractImageMetadata } from '../../utils/image-metadata-extractor.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
@@ -171,6 +172,8 @@ async function handleFileUpload (request, uploadId) {
     throw err
   }
 
+  const { dateTaken, geotag } = await extractImageMetadata(fileBuffer)
+  console.log(`[Metadata] dateTaken: ${dateTaken}, geotag: ${geotag}`)
   const containerClient = await getUploadContainerClient()
   const originalName = path.parse(file.hapi.filename).name || 'upload'
   const originalExt = path.extname(file.hapi.filename).toLowerCase()
@@ -231,8 +234,14 @@ async function handleFileUpload (request, uploadId) {
     fileSizeBytes: convertedBuffer.length,
     aiCheckerImage,
     thumbnailBlobPath,
+<<<<<<< HEAD:server/routes/media/add-a-photo.js
     localFilename: `${uploadId}/${thumbnailName}`,
     localThumbnailDir: thumbDir
+=======
+    localThumbnailPath: localFilename,
+    dateTaken,
+    geotag
+>>>>>>> feat/SIR-2363-image-metadata:server/routes/add-a-photo.js
   }
 }
 
@@ -271,9 +280,9 @@ const handlers = {
     }
 
     try {
-      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localFilename, localThumbnailDir } = await handleFileUpload(request, uploadId)
+      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localFilename, localThumbnailDir, dateTaken, geotag } = await handleFileUpload(request, uploadId)
       const thumbLoc = `/public/thumbnails/${localFilename}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, localThumbnailDir })
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, localThumbnailDir, dateTaken, geotag })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 
