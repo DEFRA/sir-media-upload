@@ -173,10 +173,10 @@ async function handleFileUpload (request, uploadId) {
   }
 
   const { dateTaken, geotag } = await extractImageMetadata(fileBuffer)
-  console.log(`[Metadata] dateTaken: ${dateTaken}, geotag: ${geotag}`)
   const containerClient = await getUploadContainerClient()
   const originalName = path.parse(file.hapi.filename).name || 'upload'
   const originalExt = path.extname(file.hapi.filename).toLowerCase()
+  
   // 2. Malware check: upload to quarantine first, Azure scans via tags, then process if clean
   const scanFilePath = `quarantine/${uploadId}/.scan-${Date.now()}${originalExt}`
   const scanBlobClient = containerClient.getBlockBlobClient(scanFilePath)
