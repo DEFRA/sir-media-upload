@@ -6,7 +6,7 @@ import path from 'node:path'
 import dirname from '../../../dirname.cjs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
 import { fileMalwareCheck } from '../../services/file-malware-checker.js'
-import { extractImageMetadata } from '../../utils/image-metadata-extractor.js'
+import { extractImageMetadata } from '../../utils/image-metadata-helpers.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
@@ -176,7 +176,7 @@ async function handleFileUpload (request, uploadId) {
   const containerClient = await getUploadContainerClient()
   const originalName = path.parse(file.hapi.filename).name || 'upload'
   const originalExt = path.extname(file.hapi.filename).toLowerCase()
-  
+
   // 2. Malware check: upload to quarantine first, Azure scans via tags, then process if clean
   const scanFilePath = `quarantine/${uploadId}/.scan-${Date.now()}${originalExt}`
   const scanBlobClient = containerClient.getBlockBlobClient(scanFilePath)
