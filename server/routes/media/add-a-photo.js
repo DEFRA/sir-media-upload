@@ -234,14 +234,10 @@ async function handleFileUpload (request, uploadId) {
     fileSizeBytes: convertedBuffer.length,
     aiCheckerImage,
     thumbnailBlobPath,
-<<<<<<< HEAD:server/routes/media/add-a-photo.js
     localFilename: `${uploadId}/${thumbnailName}`,
-    localThumbnailDir: thumbDir
-=======
-    localThumbnailPath: localFilename,
+    localThumbnailDir: thumbDir,
     dateTaken,
     geotag
->>>>>>> feat/SIR-2363-image-metadata:server/routes/add-a-photo.js
   }
 }
 
