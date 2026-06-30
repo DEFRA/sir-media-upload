@@ -3,7 +3,7 @@ import { LatLon } from 'geodesy/osgridref.js'
 import { returnFormattedDate } from './date-helpers.js'
 
 const toNgrFromLatLon = (latitude, longitude) => {
-  const latLon = new LatLon(latitude, longitude) // WGS84
+  const latLon = new LatLon(latitude, longitude)
   const osGrid = latLon.toOsGrid()
   return osGrid.toString()
 }
