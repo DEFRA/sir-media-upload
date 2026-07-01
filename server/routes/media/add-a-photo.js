@@ -15,7 +15,12 @@ const MAX_IMAGE_DIMENSION = 7200
 const QUALITY_LEVELS = [80, 70, 60, 50, 40, 30]
 const RESIZE_WIDTH_RATIO = 0.8
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024 // 25MB
-const UPLOAD_MAX_BYTES = 4 * 1024 * 1024 // 4MB
+const UPLOAD_MAX_BYTES = 1.9 * 1024 * 1024 // Need to be below 2MB (WAF limit)
+
+const isLessThanMaxBase64Size = (fileBuffer) => {
+  const base64Size = fileBuffer.toString('base64').length
+  return base64Size <= UPLOAD_MAX_BYTES
+}
 
 export function streamToBuffer (stream) {
   return new Promise((resolve, reject) => {
@@ -99,7 +104,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0, metada
     (imageMetadata.height && imageMetadata.height > MAX_IMAGE_DIMENSION)
   )
 
-  if (fileBuffer.length <= UPLOAD_MAX_BYTES && !imageExceedsMaxDimension) {
+  if (isLessThanMaxBase64Size(fileBuffer) && !imageExceedsMaxDimension) {
     return { buffer: fileBuffer, extension }
   }
 
@@ -131,7 +136,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0, metada
       .jpeg({ quality: QUALITY_LEVELS[index] })
       .toBuffer()
 
-    if (convertedBuffer.length <= UPLOAD_MAX_BYTES) {
+    if (isLessThanMaxBase64Size(convertedBuffer)) {
       return { buffer: convertedBuffer, extension: '.jpg' }
     }
 
@@ -146,7 +151,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0, metada
   if (!imageMetadata.width || imageMetadata.width <= MIN_RESIZE_WIDTH) {
     const fallbackBuffer = await sharp(fileBuffer).jpeg({ quality: 30 }).toBuffer()
 
-    if (fallbackBuffer.length > UPLOAD_MAX_BYTES) {
+    if (!isLessThanMaxBase64Size(fallbackBuffer)) {
       const err = new Error('Image file is too large after processing')
       err.code = 'FILE_TOO_LARGE'
       throw err
@@ -219,7 +224,7 @@ async function handleFileUpload (request, uploadId) {
   const metadata = await sharp(convertedBuffer).metadata()
   const exceedsMaxDimension = (metadata.width && metadata.width > MAX_IMAGE_DIMENSION) ||
     (metadata.height && metadata.height > MAX_IMAGE_DIMENSION)
-  const aiCheckerImage = (convertedBuffer.length > UPLOAD_MAX_BYTES || exceedsMaxDimension)
+  const aiCheckerImage = (!isLessThanMaxBase64Size(convertedBuffer) || exceedsMaxDimension)
     ? (await convertImageSize(convertedBuffer, extension, 0, metadata, exceedsMaxDimension)).buffer.toString('base64')
     : null
 
