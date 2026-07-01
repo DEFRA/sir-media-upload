@@ -22,9 +22,12 @@ const mockValidPng = Buffer.from(
   'base64'
 )
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024
-const UPLOAD_MAX_BYTES = 4 * 1024 * 1024
+const UPLOAD_MAX_BYTES = 1.9 * 1024 * 1024
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_IMAGE_DIMENSION = 7200
+
+const isWithinBase64UploadLimit = (buffer) => buffer.toString('base64').length <= UPLOAD_MAX_BYTES
+const RAW_BYTES_UNDER_BASE64_LIMIT = Math.floor((UPLOAD_MAX_BYTES * 3) / 4)
 
 const createForm = (filename = '', content = 'data', contentType = 'image/png') => {
   const form = new FormData()
@@ -381,7 +384,7 @@ describe(baseUrl, () => {
           format: 'png'
         })
         const reducedImageResult = await addPhoto.convertImageSize(oversizedResizableImage, '.png')
-        expect(reducedImageResult.buffer.length).toBeLessThanOrEqual(UPLOAD_MAX_BYTES)
+        expect(isWithinBase64UploadLimit(reducedImageResult.buffer)).toBe(true)
       })
 
       it('should throw FILE_TOO_LARGE at max processing depth when still oversized', async () => {
@@ -418,7 +421,7 @@ describe(baseUrl, () => {
         })
 
         const resizedResult = await addPhoto.convertImageSize(narrowOversizedImage, '.png')
-        expect(resizedResult.buffer.length).toBeLessThanOrEqual(UPLOAD_MAX_BYTES)
+        expect(isWithinBase64UploadLimit(resizedResult.buffer)).toBe(true)
       })
 
       it('scales down image dimensions when width exceeds max dimension', async () => {
@@ -444,7 +447,7 @@ describe(baseUrl, () => {
           }
         }).png().toBuffer()
 
-        expect(overDimensionImage.length).toBeLessThanOrEqual(UPLOAD_MAX_BYTES)
+        expect(isWithinBase64UploadLimit(overDimensionImage)).toBe(true)
 
         const resizedResult = await addPhoto.convertImageSize(
           overDimensionImage,
@@ -510,7 +513,7 @@ describe(baseUrl, () => {
         })
 
         const resizedResult = await addPhoto.convertImageSize(wideOversizedImage, '.png')
-        expect(resizedResult.buffer.length).toBeLessThanOrEqual(UPLOAD_MAX_BYTES)
+        expect(isWithinBase64UploadLimit(resizedResult.buffer)).toBe(true)
       })
 
       it('throws FILE_TOO_LARGE when fallback image metadata has no width and fallback output is still too large', async () => {
@@ -537,7 +540,7 @@ describe(baseUrl, () => {
           .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
           .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
           .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES - 10))
+          .mockResolvedValueOnce(Buffer.alloc(RAW_BYTES_UNDER_BASE64_LIMIT - 10))
         const resizedResult = await addPhoto.convertImageSize(Buffer.alloc(UPLOAD_MAX_BYTES + 1000), '.png')
         expect(resizedResult.extension).toBe('.jpg')
       })
