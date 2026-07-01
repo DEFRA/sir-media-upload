@@ -1,6 +1,5 @@
 import exifr from 'exifr'
 import { LatLon } from 'geodesy/osgridref.js'
-import { returnFormattedDate } from './date-helpers.js'
 
 const toNgrFromLatLon = (latitude, longitude) => {
   const latLon = new LatLon(latitude, longitude)
@@ -16,6 +15,15 @@ const convertDmsToDecimal = (dmsArray) => {
   return degrees + minutes / 60 + seconds / 3600
 }
 
+const toIsoDateString = (dateValue) => {
+  if (!dateValue) {
+    return null
+  }
+
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
 const extractImageMetadata = async (fileBuffer) => {
   try {
     const exif = await exifr.parse(fileBuffer)
@@ -25,7 +33,7 @@ const extractImageMetadata = async (fileBuffer) => {
     }
 
     const rawDate = exif.DateTimeOriginal || exif.DateTime || null
-    const dateTaken = rawDate ? returnFormattedDate(rawDate) : null
+    const dateTaken = toIsoDateString(rawDate)
 
     const latitude = exif.latitude || (exif.GPSLatitude ? convertDmsToDecimal(exif.GPSLatitude) : undefined)
     const longitude = exif.longitude || (exif.GPSLongitude ? convertDmsToDecimal(exif.GPSLongitude) : undefined)

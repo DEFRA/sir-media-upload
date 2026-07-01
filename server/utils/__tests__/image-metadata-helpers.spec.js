@@ -1,26 +1,11 @@
 import { extractImageMetadata } from '../image-metadata-helpers.js'
 import exifr from 'exifr'
-import * as dateHelpers from '../date-helpers.js'
 
 jest.mock('exifr')
-jest.mock('../date-helpers.js', () => ({
-  returnFormattedDate: jest.fn((date) => {
-    if (!date) {
-      return null
-    }
-    return new Date(date).toISOString().split('T')[0]
-  })
-}))
 
 describe('image-metadata-helpers', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    dateHelpers.returnFormattedDate.mockImplementation((date) => {
-      if (!date) {
-        return null
-      }
-      return new Date(date).toISOString().split('T')[0]
-    })
   })
 
   describe('extractImageMetadata', () => {
@@ -53,7 +38,7 @@ describe('image-metadata-helpers', () => {
 
       const result = await extractImageMetadata(Buffer.from('test-data'))
 
-      expect(result.dateTaken).toBe('2026-03-10')
+      expect(result.dateTaken).toBe('2026-03-10T10:23:26.000Z')
     })
 
     it('extracts date from DateTime when DateTimeOriginal is missing', async () => {
@@ -66,7 +51,7 @@ describe('image-metadata-helpers', () => {
 
       const result = await extractImageMetadata(Buffer.from('test-data'))
 
-      expect(result.dateTaken).toBe('2026-01-15')
+      expect(result.dateTaken).toBe('2026-01-15T14:30:00.000Z')
     })
 
     it('prefers DateTimeOriginal over DateTime', async () => {
@@ -81,7 +66,7 @@ describe('image-metadata-helpers', () => {
 
       const result = await extractImageMetadata(Buffer.from('test-data'))
 
-      expect(result.dateTaken).toBe('2026-03-10')
+      expect(result.dateTaken).toBe('2026-03-10T10:23:26.000Z')
     })
 
     it('uses decimal latitude/longitude when available', async () => {
@@ -173,7 +158,7 @@ describe('image-metadata-helpers', () => {
 
       const result = await extractImageMetadata(Buffer.from('test-data'))
 
-      expect(result.dateTaken).toBe('2026-03-10')
+      expect(result.dateTaken).toBe('2026-03-10T10:23:26.000Z')
       expect(result.geotag).toBeDefined()
     })
 
@@ -186,7 +171,7 @@ describe('image-metadata-helpers', () => {
 
       const result = await extractImageMetadata(Buffer.from('test-data'))
 
-      expect(result.dateTaken).toBe('2026-03-10')
+      expect(result.dateTaken).toBe('2026-03-10T10:23:26.000Z')
       expect(result.geotag).toBeDefined()
       expect(result.geotag).not.toBeNull()
     })
