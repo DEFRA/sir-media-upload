@@ -12,7 +12,6 @@ const SEND_PHOTOS = 'send-photos'
 const SUCCESS = 'success'
 const TERMS_FOR_UPLOADING_PHOTOS = 'terms-for-uploading-photos'
 const LINK_USED = 'link-used'
-const HEALTH = 'health'
 const LINK_EXPIRED = 'link-expired'
 
 const views = {
@@ -24,7 +23,6 @@ const views = {
   SUCCESS,
   TERMS_FOR_UPLOADING_PHOTOS,
   LINK_USED,
-  HEALTH,
   LINK_EXPIRED
 }
 
