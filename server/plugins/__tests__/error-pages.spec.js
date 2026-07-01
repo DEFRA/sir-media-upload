@@ -21,20 +21,9 @@ describe('error-pages', () => {
   })
 
   it('renders the 500 page for internal errors', async () => {
-    getServer().route({
-      method: 'GET',
-      path: '/_error-test',
-      options: {
-        auth: false
-      },
-      handler: () => {
-        throw new Error('test error')
-      }
-    })
-
     const response = await getServer().inject({
       method: 'GET',
-      url: '/_error-test'
+      url: '/error'
     })
 
     expect(response.statusCode).toEqual(500)
