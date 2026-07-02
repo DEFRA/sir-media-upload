@@ -1,3 +1,5 @@
+import config from './config.js'
+
 function getSirIdFromRequest (request) {
   const sirid = request.query.sirid || null
   return sirid
@@ -137,6 +139,10 @@ async function hasValidSirId (request) {
 
   if (!sirid) {
     return false
+  }
+
+  if (config.sirIdTesting && sirid === config.sirIdTesting) {
+    return true
   }
 
   const cachedData = await request.server.app.mediaUploadCache.get(sirid)

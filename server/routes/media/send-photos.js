@@ -11,7 +11,9 @@ const getFolderByAIResult = (validationResult, imageIndex) => {
   if (validationResult.skipped || !validationResult.response) return 'cleared'
 
   const imageResult = validationResult.response[imageIndex]
-  if (!imageResult) return harmfulContent
+  if (!imageResult) {
+    return harmfulContent
+  }
   return imageChecker.shouldBlockImage(imageResult) ? harmfulContent : 'cleared'
 }
 
