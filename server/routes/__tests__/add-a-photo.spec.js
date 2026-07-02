@@ -22,7 +22,7 @@ const mockValidPng = Buffer.from(
   'base64'
 )
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024
-const UPLOAD_MAX_BYTES = 1.9 * 1024 * 1024
+const UPLOAD_MAX_BYTES = 3.9 * 1024 * 1024
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_IMAGE_DIMENSION = 7200
 
