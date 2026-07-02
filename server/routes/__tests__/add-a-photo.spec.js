@@ -24,6 +24,7 @@ const mockValidPng = Buffer.from(
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024
 const UPLOAD_MAX_BYTES = 4 * 1024 * 1024
 const MAX_IMAGE_RESIZE_DEPTH = 5
+const MAX_IMAGE_DIMENSION = 7200
 
 const createForm = (filename = '', content = 'data', contentType = 'image/png') => {
   const form = new FormData()
@@ -80,10 +81,10 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
-    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+    it('should redirect to link-expired with sirid when sirid is present but invalid', async () => {
       getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
       const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
-      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_EXPIRED}?sirid=test-session-id`)
     })
 
     it('should render back link to your photos instead of browser history', async () => {
@@ -139,7 +140,7 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
-    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+    it('should redirect to link-expired with sirid when sirid is present but invalid', async () => {
       getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
       const form = createForm('valid.png', mockValidPng, 'image/png')
       const response = await submitPostRequest({
@@ -148,7 +149,7 @@ describe(baseUrl, () => {
         headers: form.getHeaders()
       }, constants.statusCodes.REDIRECT)
 
-      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_EXPIRED}?sirid=test-session-id`)
     })
 
     describe('file type', () => {
@@ -385,12 +386,18 @@ describe(baseUrl, () => {
 
       it('should throw FILE_TOO_LARGE at max processing depth when still oversized', async () => {
         const oversizedBuffer = Buffer.alloc(UPLOAD_MAX_BYTES + 1)
-        await expect(addPhoto.convertImageSize(oversizedBuffer, '.png', MAX_IMAGE_RESIZE_DEPTH)).rejects.toMatchObject({
+        await expect(addPhoto.convertImageSize(
+          oversizedBuffer,
+          '.png',
+          MAX_IMAGE_RESIZE_DEPTH,
+          { width: 2000, height: 2000 },
+          false
+        )).rejects.toMatchObject({
           code: 'FILE_TOO_LARGE'
         })
       })
 
-      it('processes very tall narrow image and returns jpg extension', async () => {
+      it('processes very tall narrow image within max dimension limit', async () => {
         const narrowOversizedImage = await createNoiseImageBuffer({
           width: 320,
           height: 30000,
@@ -398,7 +405,9 @@ describe(baseUrl, () => {
         })
 
         const resizedResult = await addPhoto.convertImageSize(narrowOversizedImage, '.png')
-        expect(resizedResult.extension).toBe('.jpg')
+        const metadata = await sharp(resizedResult.buffer).metadata()
+
+        expect(metadata.height).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
       })
 
       it('processes very tall narrow image within upload limit', async () => {
@@ -410,6 +419,76 @@ describe(baseUrl, () => {
 
         const resizedResult = await addPhoto.convertImageSize(narrowOversizedImage, '.png')
         expect(resizedResult.buffer.length).toBeLessThanOrEqual(UPLOAD_MAX_BYTES)
+      })
+
+      it('scales down image dimensions when width exceeds max dimension', async () => {
+        const overDimensionImage = await createNoiseImageBuffer({
+          width: 9000,
+          height: 200,
+          format: 'png'
+        })
+
+        const resizedResult = await addPhoto.convertImageSize(overDimensionImage, '.png')
+        const metadata = await sharp(resizedResult.buffer).metadata()
+
+        expect(metadata.width).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
+      })
+
+      it('scales down width when exceedsMaxDimension is under upload limit', async () => {
+        const overDimensionImage = await sharp({
+          create: {
+            width: 9000,
+            height: 200,
+            channels: 3,
+            background: { r: 255, g: 255, b: 255 }
+          }
+        }).png().toBuffer()
+
+        expect(overDimensionImage.length).toBeLessThanOrEqual(UPLOAD_MAX_BYTES)
+
+        const resizedResult = await addPhoto.convertImageSize(
+          overDimensionImage,
+          '.png',
+          0,
+          { width: 9000, height: 200 },
+          true
+        )
+        const metadata = await sharp(resizedResult.buffer).metadata()
+
+        expect(metadata.width).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
+      })
+
+      it('scales down image dimensions when height exceeds max dimension', async () => {
+        const overDimensionImage = await createNoiseImageBuffer({
+          width: 200,
+          height: 9000,
+          format: 'png'
+        })
+
+        const resizedResult = await addPhoto.convertImageSize(overDimensionImage, '.png')
+        const metadata = await sharp(resizedResult.buffer).metadata()
+
+        expect(metadata.height).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
+      })
+
+      it('uses provided metadata without re-reading metadata on initial call', async () => {
+        const oversizedResizableImage = await createNoiseImageBuffer({
+          width: 2400,
+          height: 2000,
+          format: 'png'
+        })
+
+        const metadataSpy = jest.spyOn(sharp.prototype, 'metadata')
+
+        await addPhoto.convertImageSize(
+          oversizedResizableImage,
+          '.png',
+          0,
+          { width: 2400, height: 2000 },
+          false
+        )
+
+        expect(metadataSpy).not.toHaveBeenCalled()
       })
 
       it('exhausts quality levels then resizes and recurses for wide oversized image as jpg', async () => {
@@ -678,6 +757,85 @@ describe(baseUrl, () => {
         const existingUploads = response.request.yar.get('existing-uploads')
         const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails[0].finalFilename).toContain('/upload')
+      })
+
+      describe('duplicate filename', () => {
+        it('should append -2 to finalFilename when same filename already exists in session', async () => {
+          const existingThumbnails = [
+            {
+              finalFilename: 'quarantine/test-session-id/valid.png',
+              thumbLoc: '/public/thumbnails/valid-thumbnail.png',
+              thumbnailBlobPath: 'quarantine/test-session-id/valid-thumbnail.png'
+            }
+          ]
+          const form = createForm('valid.png', mockValidPng, 'image/png')
+          const response = await submitPostRequest({
+            url,
+            payload: form.getBuffer(),
+            headers: form.getHeaders()
+          }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: existingThumbnails } } })
+          const existingUploads = response.request.yar.get('existing-uploads')
+          const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+          const newEntry = thumbnails[thumbnails.length - 1]
+          expect(newEntry.finalFilename).toContain('valid-2.png')
+        })
+
+        it('should append -3 to finalFilename when -2 already exists in session', async () => {
+          const existingThumbnails = [
+            {
+              finalFilename: 'quarantine/test-session-id/valid.png',
+              thumbLoc: '/public/thumbnails/valid-thumbnail.png',
+              thumbnailBlobPath: 'quarantine/test-session-id/valid-thumbnail.png'
+            },
+            {
+              finalFilename: 'quarantine/test-session-id/valid-2.png',
+              thumbLoc: '/public/thumbnails/valid-2-thumbnail.png',
+              thumbnailBlobPath: 'quarantine/test-session-id/valid-2-thumbnail.png'
+            }
+          ]
+          const form = createForm('valid.png', mockValidPng, 'image/png')
+          const response = await submitPostRequest({
+            url,
+            payload: form.getBuffer(),
+            headers: form.getHeaders()
+          }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: existingThumbnails } } })
+          const existingUploads = response.request.yar.get('existing-uploads')
+          const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+          const newEntry = thumbnails[thumbnails.length - 1]
+          expect(newEntry.finalFilename).toContain('valid-3.png')
+        })
+
+        it('should derive thumbnailBlobPath from the unique name', async () => {
+          const existingThumbnails = [
+            {
+              finalFilename: 'quarantine/test-session-id/valid.png',
+              thumbLoc: '/public/thumbnails/valid-thumbnail.png',
+              thumbnailBlobPath: 'quarantine/test-session-id/valid-thumbnail.png'
+            }
+          ]
+          const form = createForm('valid.png', mockValidPng, 'image/png')
+          const response = await submitPostRequest({
+            url,
+            payload: form.getBuffer(),
+            headers: form.getHeaders()
+          }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: existingThumbnails } } })
+          const existingUploads = response.request.yar.get('existing-uploads')
+          const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+          const newEntry = thumbnails[thumbnails.length - 1]
+          expect(newEntry.thumbnailBlobPath).toContain('valid-2-thumbnail.png')
+        })
+
+        it('should not modify finalFilename when no duplicate exists', async () => {
+          const form = createForm('unique.png', mockValidPng, 'image/png')
+          const response = await submitPostRequest({
+            url,
+            payload: form.getBuffer(),
+            headers: form.getHeaders()
+          }, 302)
+          const existingUploads = response.request.yar.get('existing-uploads')
+          const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+          expect(thumbnails[0].finalFilename).toContain('/unique.png')
+        })
       })
     })
 

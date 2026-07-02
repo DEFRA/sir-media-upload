@@ -7,11 +7,12 @@ import dirname from '../../../dirname.cjs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
 import { fileMalwareCheck } from '../../services/file-malware-checker.js'
 import { extractImageMetadata } from '../../utils/image-metadata-helpers.js'
-import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId } from '../../utils/upload-session-helpers.js'
+import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
 
 const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
 const MIN_RESIZE_WIDTH = 320
+const MAX_IMAGE_DIMENSION = 7200
 const QUALITY_LEVELS = [80, 70, 60, 50, 40, 30]
 const RESIZE_WIDTH_RATIO = 0.8
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024 // 25MB
@@ -92,8 +93,14 @@ export async function convertImageType (fileBuffer, file) {
   }
 }
 
-export async function convertImageSize (fileBuffer, extension, depth = 0) {
-  if (fileBuffer.length <= UPLOAD_MAX_BYTES) {
+export async function convertImageSize (fileBuffer, extension, depth = 0, metadata = null, exceedsMaxDimension = null) {
+  const imageMetadata = metadata || await sharp(fileBuffer).metadata()
+  const imageExceedsMaxDimension = exceedsMaxDimension ?? (
+    (imageMetadata.width && imageMetadata.width > MAX_IMAGE_DIMENSION) ||
+    (imageMetadata.height && imageMetadata.height > MAX_IMAGE_DIMENSION)
+  )
+
+  if (fileBuffer.length <= UPLOAD_MAX_BYTES && !imageExceedsMaxDimension) {
     return { buffer: fileBuffer, extension }
   }
 
@@ -101,6 +108,19 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
     const err = new Error('Image file is too large after processing')
     err.code = 'FILE_TOO_LARGE'
     throw err
+  }
+
+  if (imageExceedsMaxDimension) {
+    const scaledBuffer = await sharp(fileBuffer)
+      .resize({
+        width: MAX_IMAGE_DIMENSION,
+        height: MAX_IMAGE_DIMENSION,
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .toBuffer()
+
+    return convertImageSize(scaledBuffer, extension, depth + 1)
   }
 
   const tryJpegQuality = async (index) => {
@@ -124,8 +144,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
     return qualityResult
   }
 
-  const metadata = await sharp(fileBuffer).metadata()
-  if (!metadata.width || metadata.width <= MIN_RESIZE_WIDTH) {
+  if (!imageMetadata.width || imageMetadata.width <= MIN_RESIZE_WIDTH) {
     const fallbackBuffer = await sharp(fileBuffer).jpeg({ quality: 30 }).toBuffer()
 
     if (fallbackBuffer.length > UPLOAD_MAX_BYTES) {
@@ -139,7 +158,7 @@ export async function convertImageSize (fileBuffer, extension, depth = 0) {
 
   const resizedBuffer = await sharp(fileBuffer)
     .resize({
-      width: Math.max(MIN_RESIZE_WIDTH, Math.floor(metadata.width * RESIZE_WIDTH_RATIO)),
+      width: Math.max(MIN_RESIZE_WIDTH, Math.floor(imageMetadata.width * RESIZE_WIDTH_RATIO)),
       withoutEnlargement: true
     })
     .jpeg({ quality: 30 })
@@ -199,9 +218,12 @@ async function handleFileUpload (request, uploadId) {
   // 3. Convert image type
   const { buffer: convertedBuffer, extension } = await convertImageType(fileBuffer, file)
 
-  // 4. Check 4MB size and store in session if needed
-  const aiCheckerImage = convertedBuffer.length > UPLOAD_MAX_BYTES
-    ? (await convertImageSize(convertedBuffer, extension)).buffer.toString('base64')
+  // 4. Check 4MB size or max dimensions and store in session if needed
+  const metadata = await sharp(convertedBuffer).metadata()
+  const exceedsMaxDimension = (metadata.width && metadata.width > MAX_IMAGE_DIMENSION) ||
+    (metadata.height && metadata.height > MAX_IMAGE_DIMENSION)
+  const aiCheckerImage = (convertedBuffer.length > UPLOAD_MAX_BYTES || exceedsMaxDimension)
+    ? (await convertImageSize(convertedBuffer, extension, 0, metadata, exceedsMaxDimension)).buffer.toString('base64')
     : null
 
   // 5. Create thumbnail from converted image
@@ -209,9 +231,16 @@ async function handleFileUpload (request, uploadId) {
     .resize({ width: 200 })
     .toBuffer()
 
-  const thumbnailName = `${originalName}-thumbnail${extension}`
-  const finalFilename = `quarantine/${uploadId}/${originalName}${extension}`
-  const thumbnailBlobPath = `quarantine/${uploadId}/${thumbnailName}`
+  const existingNames = getThumbnailsBySirId(request).map(t => t.finalFilename)
+  const findUniqueName = (blobPath, count = 2) => {
+    if (!existingNames.includes(blobPath)) {
+      return blobPath
+    }
+    return findUniqueName(`quarantine/${uploadId}/${originalName}-${count}${extension}`, count + 1)
+  }
+
+  const finalFilename = findUniqueName(`quarantine/${uploadId}/${originalName}${extension}`)
+  const thumbnailBlobPath = `${finalFilename.slice(0, finalFilename.length - extension.length)}-thumbnail${extension}`
 
   // 6. Upload converted image and thumbnail to same container/folder
   await containerClient
@@ -223,6 +252,8 @@ async function handleFileUpload (request, uploadId) {
     .uploadData(thumbnail)
 
   // Save local thumbnail file
+  const uniqueBaseName = finalFilename.split('/').pop().replace(extension, '')
+  const thumbnailName = `${uniqueBaseName}-thumbnail${extension}`
   const thumbDir = path.join(dirname, `server/public/build/thumbnails/${uploadId}`)
   if (!fs.existsSync(thumbDir)) {
     fs.mkdirSync(thumbDir, { recursive: true })
@@ -244,7 +275,7 @@ async function handleFileUpload (request, uploadId) {
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 
@@ -259,7 +290,7 @@ const handlers = {
 
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 

@@ -37,8 +37,12 @@ const schema = Joi.object().keys({
   storageAccount: Joi.string().required(),
   storageAccessKey: Joi.string().optional(),
   smartIncidentReportingBaseUrl: Joi.string().required(),
-  contentSafetyEndpoint: Joi.string().required(),
-  contentSafetyKey: Joi.string().required(),
+  apimAIScope: Joi.string().required(),
+  apimAIClientId: Joi.string().required(),
+  apimAISecret: Joi.string().required(),
+  apimAITenantId: Joi.string().required(),
+  apimAIEndpoint: Joi.string().required(),
+  sirIdTesting: Joi.string().optional(),
   appPathPrefix: Joi.string().default('/media')
 })
 
@@ -60,8 +64,12 @@ const config = {
   storageAccount: process.env.AZURE_STORAGE_ACCOUNT,
   storageAccessKey: process.env.AZURE_STORAGE_ACCESS_KEY,
   smartIncidentReportingBaseUrl: updateBaseUrl(process.env.SMART_INCIDENT_REPORTING_BASE_URL),
-  contentSafetyEndpoint: process.env.CONTENT_SAFETY_ENDPOINT,
-  contentSafetyKey: process.env.CONTENT_SAFETY_KEY,
+  apimAIScope: process.env.APIM_AI_SCOPE,
+  apimAIClientId: process.env.APIM_AI_CLIENT_ID,
+  apimAISecret: process.env.APIM_AI_SECRET,
+  apimAITenantId: process.env.APIM_AI_TENANT_ID,
+  apimAIEndpoint: process.env.APIM_AI_ENDPOINT,
+  sirIdTesting: process.env.SIR_ID_TESTING,
   appPathPrefix: process.env.APP_PATH_PREFIX
 }
 

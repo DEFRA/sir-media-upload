@@ -1,3 +1,5 @@
+import config from './config.js'
+
 function getSirIdFromRequest (request) {
   const sirid = request.query.sirid || null
   return sirid
@@ -100,11 +102,47 @@ function addSirIdToQueryString (request, url) {
   return nextUrl
 }
 
+function getSubmittedSirId (request) {
+  return request.yar.get('submitted-sirid') || null
+}
+
+function markSirIdAsSubmitted (request, sirid = getSirIdFromRequest(request)) {
+  if (!sirid) {
+    return null
+  }
+
+  request.yar.set('submitted-sirid', sirid)
+
+  return sirid
+}
+
+function hasSubmittedSirId (request, sirid = getSirIdFromRequest(request)) {
+  if (!sirid) {
+    return false
+  }
+
+  return getSubmittedSirId(request) === sirid
+}
+
+function getInvalidSirIdRedirectUrl (request, routes) {
+  const { sirid } = request.query
+
+  if (!sirid || hasSubmittedSirId(request, sirid)) {
+    return addSirIdToQueryString(request, routes.LINK_USED)
+  }
+
+  return addSirIdToQueryString(request, routes.LINK_EXPIRED)
+}
+
 async function hasValidSirId (request) {
   const { sirid } = request.query
 
   if (!sirid) {
     return false
+  }
+
+  if (config.sirIdTesting && sirid === config.sirIdTesting) {
+    return true
   }
 
   const cachedData = await request.server.app.mediaUploadCache.get(sirid)
@@ -124,6 +162,10 @@ export {
   getSirIdFromRequest,
   getExistingUploads,
   setExistingUploads,
+  getSubmittedSirId,
+  markSirIdAsSubmitted,
+  hasSubmittedSirId,
+  getInvalidSirIdRedirectUrl,
   getSessionDetailsBySirId,
   getThumbnailsBySirId,
   addThumbnailBySirId,
