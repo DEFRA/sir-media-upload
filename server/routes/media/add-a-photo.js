@@ -228,9 +228,16 @@ async function handleFileUpload (request, uploadId) {
     .resize({ width: 200 })
     .toBuffer()
 
-  const thumbnailName = `${originalName}-thumbnail${extension}`
-  const finalFilename = `quarantine/${uploadId}/${originalName}${extension}`
-  const thumbnailBlobPath = `quarantine/${uploadId}/${thumbnailName}`
+  const existingNames = getThumbnailsBySirId(request).map(t => t.finalFilename)
+  const findUniqueName = (blobPath, count = 2) => {
+    if (!existingNames.includes(blobPath)) {
+      return blobPath
+    }
+    return findUniqueName(`quarantine/${uploadId}/${originalName}-${count}${extension}`, count + 1)
+  }
+
+  const finalFilename = findUniqueName(`quarantine/${uploadId}/${originalName}${extension}`)
+  const thumbnailBlobPath = `${finalFilename.slice(0, finalFilename.length - extension.length)}-thumbnail${extension}`
 
   // 6. Upload converted image and thumbnail to same container/folder
   await containerClient
@@ -242,6 +249,8 @@ async function handleFileUpload (request, uploadId) {
     .uploadData(thumbnail)
 
   // Save local thumbnail file
+  const uniqueBaseName = finalFilename.split('/').pop().replace(extension, '')
+  const thumbnailName = `${uniqueBaseName}-thumbnail${extension}`
   const thumbDir = path.join(dirname, `server/public/build/thumbnails/${uploadId}`)
   if (!fs.existsSync(thumbDir)) {
     fs.mkdirSync(thumbDir, { recursive: true })
