@@ -33,6 +33,7 @@
     "@hapi/hapi": "21.4.3",
     "@hapi/inert": "^7.1.0",
     "@hapi/vision": "^7.0.3",
+    "@hapi/wreck": "18.1.2",
     "@hapi/yar": "11.0.3",
     "govuk-frontend": "^6.1.0",
     "hapi-pino": "^12.1.0",
