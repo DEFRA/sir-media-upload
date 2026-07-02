@@ -10,7 +10,11 @@ import {
   clearSessionDetailsBySirId,
   getSirIdFromRequest,
   getExistingUploads,
-  setExistingUploads
+  setExistingUploads,
+  getSubmittedSirId,
+  markSirIdAsSubmitted,
+  hasSubmittedSirId,
+  getInvalidSirIdRedirectUrl
 } from '../upload-session-helpers.js'
 
 describe('upload-session-helpers', () => {
@@ -302,6 +306,62 @@ describe('upload-session-helpers', () => {
     it('should call cache.get with sirid', async () => {
       await hasValidSirId(mockRequest)
       expect(mockRequest.server.app.mediaUploadCache.get).toHaveBeenCalledWith('test-session-id')
+    })
+  })
+
+  describe('submitted sirid', () => {
+    it('should return null submitted sirid when session key is missing', () => {
+      const result = getSubmittedSirId(mockRequest)
+      expect(result).toBeNull()
+    })
+
+    it('should set submitted sirid', () => {
+      const result = markSirIdAsSubmitted(mockRequest)
+      expect(result).toBe('test-session-id')
+      expect(mockRequest.yar.get('submitted-sirid')).toBe('test-session-id')
+    })
+
+    it('should replace existing submitted sirid when a new one is set', () => {
+      markSirIdAsSubmitted(mockRequest)
+      const result = markSirIdAsSubmitted(mockRequest, 'other-session-id')
+      expect(result).toBe('other-session-id')
+      expect(mockRequest.yar.get('submitted-sirid')).toBe('other-session-id')
+    })
+
+    it('should return false for hasSubmittedSirId when sirid is missing', () => {
+      mockRequest.query.sirid = undefined
+      const result = hasSubmittedSirId(mockRequest)
+      expect(result).toBe(false)
+    })
+
+    it('should return true for hasSubmittedSirId after marking sirid as submitted', () => {
+      markSirIdAsSubmitted(mockRequest)
+      const result = hasSubmittedSirId(mockRequest)
+      expect(result).toBe(true)
+    })
+  })
+
+  describe('getInvalidSirIdRedirectUrl', () => {
+    const routes = {
+      LINK_USED: '/link-used',
+      LINK_EXPIRED: '/link-expired'
+    }
+
+    it('should redirect to link-used when sirid is missing', () => {
+      mockRequest.query.sirid = undefined
+      const result = getInvalidSirIdRedirectUrl(mockRequest, routes)
+      expect(result).toBe('/link-used')
+    })
+
+    it('should redirect to link-expired when sirid is present and not submitted', () => {
+      const result = getInvalidSirIdRedirectUrl(mockRequest, routes)
+      expect(result).toBe('/link-expired?sirid=test-session-id')
+    })
+
+    it('should redirect to link-used when sirid is submitted', () => {
+      markSirIdAsSubmitted(mockRequest)
+      const result = getInvalidSirIdRedirectUrl(mockRequest, routes)
+      expect(result).toBe('/link-used?sirid=test-session-id')
     })
   })
 

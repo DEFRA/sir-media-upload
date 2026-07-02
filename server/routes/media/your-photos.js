@@ -3,14 +3,14 @@ import fs from 'node:fs'
 import path from 'node:path'
 import dirname from '../../../dirname.cjs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
-import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, removeThumbnailFromSession } from '../../utils/upload-session-helpers.js'
+import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, removeThumbnailFromSession, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
 
 const MAX_PHOTOS = 5
 
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 
@@ -31,7 +31,7 @@ const handlers = {
 
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 

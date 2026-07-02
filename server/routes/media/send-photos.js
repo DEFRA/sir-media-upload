@@ -3,7 +3,7 @@ import path from 'path'
 import imageChecker from '../../services/image-checker.js'
 import { getUploadContainerClient, moveBlobToFolder } from '../../services/blob-storage.js'
 import { sendMessage } from '../../services/service-bus.js'
-import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId } from '../../utils/upload-session-helpers.js'
+import { hasValidSirId, getThumbnailsBySirId, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
 
 const harmfulContent = 'quarantine/harmful-content'
 
@@ -58,7 +58,7 @@ const buildPayload = (sirId, images, validationResult, uploadContainerUrl) => {
 const handlers = {
   get: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 
@@ -71,7 +71,7 @@ const handlers = {
   },
   post: async (request, h) => {
     if (!(await hasValidSirId(request))) {
-      const redirectUrl = addSirIdToQueryString(request, constants.routes.LINK_USED)
+      const redirectUrl = getInvalidSirIdRedirectUrl(request, constants.routes)
       return h.redirect(redirectUrl)
     }
 

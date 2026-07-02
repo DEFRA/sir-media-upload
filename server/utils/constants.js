@@ -12,6 +12,7 @@ const SEND_PHOTOS = 'send-photos'
 const SUCCESS = 'success'
 const TERMS_FOR_UPLOADING_PHOTOS = 'terms-for-uploading-photos'
 const LINK_USED = 'link-used'
+const LINK_EXPIRED = 'link-expired'
 
 const views = {
   PUBLIC,
@@ -21,7 +22,8 @@ const views = {
   SEND_PHOTOS,
   SUCCESS,
   TERMS_FOR_UPLOADING_PHOTOS,
-  LINK_USED
+  LINK_USED,
+  LINK_EXPIRED
 }
 
 const routes = Object.fromEntries(
