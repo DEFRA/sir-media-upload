@@ -81,10 +81,10 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
-    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+    it('should redirect to link-expired with sirid when sirid is present but invalid', async () => {
       getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
       const response = await submitGetRequest({ url }, null, constants.statusCodes.REDIRECT)
-      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_EXPIRED}?sirid=test-session-id`)
     })
 
     it('should render back link to your photos instead of browser history', async () => {
@@ -140,7 +140,7 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
-    it('should redirect to link-used with sirid when sirid is present but invalid', async () => {
+    it('should redirect to link-expired with sirid when sirid is present but invalid', async () => {
       getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue(null)
       const form = createForm('valid.png', mockValidPng, 'image/png')
       const response = await submitPostRequest({
@@ -149,7 +149,7 @@ describe(baseUrl, () => {
         headers: form.getHeaders()
       }, constants.statusCodes.REDIRECT)
 
-      expect(response.headers.location).toBe(`${constants.routes.LINK_USED}?sirid=test-session-id`)
+      expect(response.headers.location).toBe(`${constants.routes.LINK_EXPIRED}?sirid=test-session-id`)
     })
 
     describe('file type', () => {
@@ -757,6 +757,85 @@ describe(baseUrl, () => {
         const existingUploads = response.request.yar.get('existing-uploads')
         const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails[0].finalFilename).toContain('/upload')
+      })
+
+      describe('duplicate filename', () => {
+        it('should append -2 to finalFilename when same filename already exists in session', async () => {
+          const existingThumbnails = [
+            {
+              finalFilename: 'quarantine/test-session-id/valid.png',
+              thumbLoc: '/public/thumbnails/valid-thumbnail.png',
+              thumbnailBlobPath: 'quarantine/test-session-id/valid-thumbnail.png'
+            }
+          ]
+          const form = createForm('valid.png', mockValidPng, 'image/png')
+          const response = await submitPostRequest({
+            url,
+            payload: form.getBuffer(),
+            headers: form.getHeaders()
+          }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: existingThumbnails } } })
+          const existingUploads = response.request.yar.get('existing-uploads')
+          const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+          const newEntry = thumbnails[thumbnails.length - 1]
+          expect(newEntry.finalFilename).toContain('valid-2.png')
+        })
+
+        it('should append -3 to finalFilename when -2 already exists in session', async () => {
+          const existingThumbnails = [
+            {
+              finalFilename: 'quarantine/test-session-id/valid.png',
+              thumbLoc: '/public/thumbnails/valid-thumbnail.png',
+              thumbnailBlobPath: 'quarantine/test-session-id/valid-thumbnail.png'
+            },
+            {
+              finalFilename: 'quarantine/test-session-id/valid-2.png',
+              thumbLoc: '/public/thumbnails/valid-2-thumbnail.png',
+              thumbnailBlobPath: 'quarantine/test-session-id/valid-2-thumbnail.png'
+            }
+          ]
+          const form = createForm('valid.png', mockValidPng, 'image/png')
+          const response = await submitPostRequest({
+            url,
+            payload: form.getBuffer(),
+            headers: form.getHeaders()
+          }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: existingThumbnails } } })
+          const existingUploads = response.request.yar.get('existing-uploads')
+          const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+          const newEntry = thumbnails[thumbnails.length - 1]
+          expect(newEntry.finalFilename).toContain('valid-3.png')
+        })
+
+        it('should derive thumbnailBlobPath from the unique name', async () => {
+          const existingThumbnails = [
+            {
+              finalFilename: 'quarantine/test-session-id/valid.png',
+              thumbLoc: '/public/thumbnails/valid-thumbnail.png',
+              thumbnailBlobPath: 'quarantine/test-session-id/valid-thumbnail.png'
+            }
+          ]
+          const form = createForm('valid.png', mockValidPng, 'image/png')
+          const response = await submitPostRequest({
+            url,
+            payload: form.getBuffer(),
+            headers: form.getHeaders()
+          }, 302, { 'existing-uploads': { 'test-session-id': { thumbnails: existingThumbnails } } })
+          const existingUploads = response.request.yar.get('existing-uploads')
+          const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+          const newEntry = thumbnails[thumbnails.length - 1]
+          expect(newEntry.thumbnailBlobPath).toContain('valid-2-thumbnail.png')
+        })
+
+        it('should not modify finalFilename when no duplicate exists', async () => {
+          const form = createForm('unique.png', mockValidPng, 'image/png')
+          const response = await submitPostRequest({
+            url,
+            payload: form.getBuffer(),
+            headers: form.getHeaders()
+          }, 302)
+          const existingUploads = response.request.yar.get('existing-uploads')
+          const thumbnails = existingUploads['test-session-id']?.thumbnails || []
+          expect(thumbnails[0].finalFilename).toContain('/unique.png')
+        })
       })
     })
 
