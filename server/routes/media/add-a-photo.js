@@ -16,7 +16,7 @@ const MAX_IMAGE_DIMENSION = 7200
 const QUALITY_LEVELS = [80, 70, 60, 50, 40, 30]
 const RESIZE_WIDTH_RATIO = 0.8
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024 // 25MB
-const UPLOAD_MAX_BYTES = 1.9 * 1024 * 1024 // Need to be below 2MB (WAF limit)
+const UPLOAD_MAX_BYTES = 3.9 * 1024 * 1024 // Need to be below 4MB (WAF limit)
 
 const isLessThanMaxBase64Size = (fileBuffer) => {
   const base64Size = fileBuffer.toString('base64').length
