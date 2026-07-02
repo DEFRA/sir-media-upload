@@ -1,7 +1,7 @@
 import Hapi from '@hapi/hapi'
 import config from './utils/config.js'
 // import Blipp from 'blipp'
-// import errorPages from './plugins/error-pages.js'
+import errorPages from './plugins/error-pages.js'
 import inert from './plugins/inert.js'
 import router from './plugins/router.js'
 import views from './plugins/views.js'
@@ -47,7 +47,7 @@ const init = async server => {
 const registerPlugins = async server => {
   await server.register(logging)
   await server.register(session)
-  //   await server.register(errorPages)
+  await server.register(errorPages)
   await server.register(inert)
   await server.register(await router())
   await server.register(views)

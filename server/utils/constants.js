@@ -12,6 +12,7 @@ const SEND_PHOTOS = 'send-photos'
 const SUCCESS = 'success'
 const TERMS_FOR_UPLOADING_PHOTOS = 'terms-for-uploading-photos'
 const LINK_USED = 'link-used'
+const ERROR = 'error'
 const LINK_EXPIRED = 'link-expired'
 
 const views = {
@@ -29,6 +30,8 @@ const views = {
 const routes = Object.fromEntries(
   Object.entries(views).map(([key, value]) => [key, `${config.appPathPrefix}/${value}`])
 )
+
+routes.ERROR = `/${ERROR}`
 
 const statusCodes = {
   OK: 200,
