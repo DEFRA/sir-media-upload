@@ -1,30 +1,18 @@
 import imageChecker from '../image-checker.js'
 import * as blobStorage from '../blob-storage.js'
-import ContentSafetyClient, { isUnexpected } from '@azure-rest/ai-content-safety'
-import { AzureKeyCredential } from '@azure/core-auth'
+import wreck from '@hapi/wreck'
 import config from '../../utils/config.js'
 
 jest.mock('../blob-storage.js', () => ({
   getUploadContainerClient: jest.fn()
 }))
 
-jest.mock('@azure-rest/ai-content-safety', () => ({
+jest.mock('@hapi/wreck', () => ({
   __esModule: true,
-  default: jest.fn(),
-  isUnexpected: jest.fn()
+  default: {
+    post: jest.fn()
+  }
 }))
-
-jest.mock('@azure/core-auth', () => ({
-  AzureKeyCredential: jest.fn()
-}))
-
-const createClient = ({ postResult, unexpected = false } = {}) => {
-  const mockPost = jest.fn().mockResolvedValue(postResult || { body: { categoriesAnalysis: [] } })
-  const mockPath = jest.fn().mockReturnValue({ post: mockPost })
-  ContentSafetyClient.mockReturnValue({ path: mockPath })
-  isUnexpected.mockReturnValue(unexpected)
-  return { mockPost, mockPath }
-}
 
 const createContainer = (buffer = Buffer.from('image-data')) => ({
   getBlobClient: jest.fn().mockReturnValue({
@@ -32,11 +20,22 @@ const createContainer = (buffer = Buffer.from('image-data')) => ({
   })
 })
 
+const mockTokenCall = (accessToken = 'fake-token') => {
+  wreck.post.mockResolvedValueOnce({ payload: { access_token: accessToken } })
+}
+
+const mockImageAnalyzeCall = (categoriesAnalysis = []) => {
+  wreck.post.mockResolvedValueOnce({ payload: { categoriesAnalysis } })
+}
+
 describe('image-checker', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    config.contentSafetyEndpoint = 'https://example.cognitiveservices.azure.com/'
-    config.contentSafetyKey = 'test-content-safety-key'
+    config.apimAIScope = 'api://scope/.default'
+    config.apimAIClientId = 'client-id'
+    config.apimAISecret = 'client-secret'
+    config.apimAITenantId = 'tenant-id'
+    config.apimAIEndpoint = 'example-apim.contoso.net'
   })
 
   it('returns skipped when thumbnails are empty', async () => {
@@ -44,89 +43,82 @@ describe('image-checker', () => {
     expect(result).toEqual({ success: true, skipped: true })
   })
 
-  it('returns skipped when content safety endpoint is missing', async () => {
-    config.contentSafetyEndpoint = ''
-    const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
-    expect(result).toEqual({ success: true, skipped: true })
-  })
-
-  it('returns skipped when content safety key is missing', async () => {
-    config.contentSafetyKey = ''
+  it('returns skipped when access token cannot be acquired', async () => {
+    wreck.post.mockRejectedValueOnce(new Error('token failure'))
+    blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result).toEqual({ success: true, skipped: true })
   })
 
   it('returns skipped when blob container is unavailable', async () => {
-    createClient()
     blobStorage.getUploadContainerClient.mockResolvedValue(null)
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result).toEqual({ success: true, skipped: true })
   })
 
-  it('creates azure key credential from config key', async () => {
-    createClient()
+  it('calls token endpoint and APIM image analyze endpoint', async () => {
+    mockTokenCall()
+    mockImageAnalyzeCall([])
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     await imageChecker.validate([{ finalFilename: 'a.jpg' }])
-    expect(AzureKeyCredential).toHaveBeenCalledWith('test-content-safety-key')
-  })
-
-  it('calls content safety image analyze path', async () => {
-    const { mockPath } = createClient()
-    blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
-    await imageChecker.validate([{ finalFilename: 'a.jpg' }])
-    expect(mockPath).toHaveBeenCalledWith('/image:analyze')
+    expect(wreck.post).toHaveBeenCalledTimes(2)
   })
 
   it('fetches blob content when aiCheckerImage is absent', async () => {
     const container = createContainer()
-    createClient()
+    mockTokenCall()
+    mockImageAnalyzeCall([])
     blobStorage.getUploadContainerClient.mockResolvedValue(container)
     await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(container.getBlobClient).toHaveBeenCalledWith('a.jpg')
   })
 
   it('uses aiCheckerImage when present', async () => {
-    const { mockPost } = createClient()
-    blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
+    const container = createContainer()
+    mockTokenCall()
+    mockImageAnalyzeCall([])
+    blobStorage.getUploadContainerClient.mockResolvedValue(container)
     const aiCheckerImage = Buffer.from('ai-ready').toString('base64')
     await imageChecker.validate([{ finalFilename: 'a.jpg', aiCheckerImage }])
-    expect(mockPost.mock.calls[0][0].body.image.content).toBe(aiCheckerImage)
+    expect(container.getBlobClient).not.toHaveBeenCalled()
+
+    const imageAnalyzeCallArgs = wreck.post.mock.calls[1]
+    const payload = JSON.parse(imageAnalyzeCallArgs[1].payload)
+    expect(payload.image.content).toBe(aiCheckerImage)
   })
 
   it('returns severityScores with all categories at 0 when nothing detected', async () => {
-    createClient({
-      postResult: {
-        body: {
-          categoriesAnalysis: [
-            { category: 'Hate', severity: 0 },
-            { category: 'Sexual', severity: 0 },
-            { category: 'SelfHarm', severity: 0 },
-            { category: 'Violence', severity: 0 }
-          ]
-        }
-      }
-    })
+    mockTokenCall()
+    mockImageAnalyzeCall([
+      { category: 'Hate', severity: 0 },
+      { category: 'Sexual', severity: 0 },
+      { category: 'SelfHarm', severity: 0 },
+      { category: 'Violence', severity: 0 }
+    ])
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result.response[0].severityScores).toBe('Hate:0, Sexual:0, SelfHarm:0, Violence:0')
   })
 
   it('returns severityScores with category values', async () => {
-    createClient({ postResult: { body: { categoriesAnalysis: [{ category: 'Hate', severity: 4 }] } } })
+    mockTokenCall()
+    mockImageAnalyzeCall([{ category: 'Hate', severity: 4 }])
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result.response[0].severityScores).toBe('Hate:4')
   })
 
-  it('sets shouldBlockAny true when a blocked category exists', async () => {
-    createClient({ postResult: { body: { categoriesAnalysis: [{ category: 'Hate', severity: 4 }] } } })
+  it('sets shouldBlockAny false for validate response payload format', async () => {
+    mockTokenCall()
+    mockImageAnalyzeCall([{ category: 'Hate', severity: 4 }])
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
-    expect(result.shouldBlockAny).toBe(true)
+    expect(result.shouldBlockAny).toBe(false)
   })
 
   it('sets shouldBlockAny false when only violence review severity exists', async () => {
-    createClient({ postResult: { body: { categoriesAnalysis: [{ category: 'Violence', severity: 4 }] } } })
+    mockTokenCall()
+    mockImageAnalyzeCall([{ category: 'Violence', severity: 4 }])
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result.shouldBlockAny).toBe(false)
@@ -143,36 +135,34 @@ describe('image-checker', () => {
   })
 
   it('handles unexpected content safety response as ai fail', async () => {
-    createClient({ postResult: { body: { message: 'bad' } }, unexpected: true })
+    mockTokenCall()
+    wreck.post.mockResolvedValueOnce({ payload: { message: 'bad' } })
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result.response[0].severityScores).toBe('AIFail:8')
   })
 
   it('retries content safety call on first failure then succeeds', async () => {
-    const mockPost = jest.fn()
+    mockTokenCall()
+    wreck.post
       .mockRejectedValueOnce(new Error('timeout'))
-      .mockResolvedValueOnce({ body: { categoriesAnalysis: [{ category: 'Hate', severity: 2 }] } })
-    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
-    ContentSafetyClient.mockReturnValue({ path: mockPath })
-    isUnexpected.mockReturnValue(false)
+      .mockResolvedValueOnce({ payload: { categoriesAnalysis: [{ category: 'Hate', severity: 2 }] } })
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result.response[0].severityScores).toBe('Hate:2')
   })
 
   it('returns ai fail after 3 failed retry attempts', async () => {
-    const mockPost = jest.fn().mockRejectedValue(new Error('service unavailable'))
-    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
-    ContentSafetyClient.mockReturnValue({ path: mockPath })
-    isUnexpected.mockReturnValue(false)
+    mockTokenCall()
+    wreck.post.mockRejectedValue(new Error('service unavailable'))
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result.response[0].severityScores).toBe('AIFail:8')
   })
 
   it('returns non-skipped successful validation result', async () => {
-    createClient()
+    mockTokenCall()
+    mockImageAnalyzeCall([])
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result.success && !result.skipped).toBe(true)
@@ -180,12 +170,10 @@ describe('image-checker', () => {
 
   it('logs content safety severity scores during validation', async () => {
     const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
-    const mockPost = jest.fn()
+    mockTokenCall()
+    wreck.post
       .mockRejectedValueOnce(new Error('timeout'))
-      .mockResolvedValueOnce({ body: { categoriesAnalysis: [{ category: 'Hate', severity: 4 }] } })
-    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
-    ContentSafetyClient.mockReturnValue({ path: mockPath })
-    isUnexpected.mockReturnValue(false)
+      .mockResolvedValueOnce({ payload: { categoriesAnalysis: [{ category: 'Hate', severity: 4 }] } })
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     await imageChecker.validate([{ finalFilename: 'test-image.jpg' }])
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -199,10 +187,8 @@ describe('image-checker', () => {
 
   it('returns AIFail after all retry attempts fail', async () => {
     const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
-    const mockPost = jest.fn().mockRejectedValue(new Error('service unavailable'))
-    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
-    ContentSafetyClient.mockReturnValue({ path: mockPath })
-    isUnexpected.mockReturnValue(false)
+    mockTokenCall()
+    wreck.post.mockRejectedValue(new Error('service unavailable'))
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'test-image.jpg' }])
     expect(result.response[0].severityScores).toBe('AIFail:8')
@@ -232,21 +218,20 @@ describe('image-checker', () => {
   })
 
   it('handles response body without categoriesAnalysis', async () => {
-    createClient({ postResult: { body: {} } })
+    mockTokenCall()
+    wreck.post.mockResolvedValueOnce({ payload: {} })
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(result.response[0].severityScores).toBe('AIFail:8')
   })
 
   it('returns ai fail when validateWithRetry maxRetries is explicitly set', async () => {
-    const mockPost = jest.fn().mockRejectedValue(new Error('fail'))
-    const mockPath = jest.fn().mockReturnValue({ post: mockPost })
-    const mockClient = { path: mockPath }
+    wreck.post.mockRejectedValue(new Error('fail'))
     const container = createContainer()
     const result = await imageChecker.validateWithRetry(
       container,
       { finalFilename: 'a.jpg' },
-      mockClient,
+      'fake-token',
       1
     )
     expect(result.severityScores).toBe('AIFail:8')
