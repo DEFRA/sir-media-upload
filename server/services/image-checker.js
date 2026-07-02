@@ -88,7 +88,6 @@ const validateSingleImage = async (containerClient, image, accessToken) => {
   const result = await callAIContentSafetyAPIM(accessToken, aiBuffer)
 
   if (!result?.categoriesAnalysis) {
-    console.log(result)
     throw new Error('Unexpected response from Azure Content Safety API')
   }
 
@@ -97,9 +96,9 @@ const validateSingleImage = async (containerClient, image, accessToken) => {
   console.log(`Content Safety severity scores for ${image.finalFilename}: ${scores}`)
 
   return {
-    ...result.body,
+    ...result,
     severityScores: scores,
-    shouldBlock: shouldBlockImage(result.body)
+    shouldBlock: shouldBlockImage(result)
   }
 }
 
