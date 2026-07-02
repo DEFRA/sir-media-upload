@@ -209,5 +209,93 @@ describe(baseUrl, () => {
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(getPayload().mediaUpload.images[0].metadata.fileType).toBe('')
     })
+
+    it('includes date metadata when available', async () => {
+      const thumbnails = [{
+        finalFilename: 'quarantine/test-session-id/photo1.jpg',
+        thumbnailBlobPath: 'quarantine/test-session-id/photo1-thumbnail.jpg',
+        fileSizeBytes: 1024,
+        dateTaken: '2026-03-10'
+      }]
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(getPayload().mediaUpload.images[0].metadata.dateTaken).toBe('2026-03-10')
+    })
+
+    it('excludes date metadata when not available', async () => {
+      const thumbnails = [{
+        finalFilename: 'quarantine/test-session-id/photo1.jpg',
+        thumbnailBlobPath: 'quarantine/test-session-id/photo1-thumbnail.jpg',
+        fileSizeBytes: 1024
+      }]
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(getPayload().mediaUpload.images[0].metadata.dateTaken).toBeNull()
+    })
+
+    it('includes geotag metadata when available', async () => {
+      const thumbnails = [{
+        finalFilename: 'quarantine/test-session-id/photo1.jpg',
+        thumbnailBlobPath: 'quarantine/test-session-id/photo1-thumbnail.jpg',
+        fileSizeBytes: 1024,
+        geotag: 'NY12345'
+      }]
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(getPayload().mediaUpload.images[0].metadata.geotag).toBe('NY12345')
+    })
+
+    it('excludes geotag metadata when not available', async () => {
+      const thumbnails = [{
+        finalFilename: 'quarantine/test-session-id/photo1.jpg',
+        thumbnailBlobPath: 'quarantine/test-session-id/photo1-thumbnail.jpg',
+        fileSizeBytes: 1024
+      }]
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(getPayload().mediaUpload.images[0].metadata.geotag).toBeNull()
+    })
+
+    it('includes both date and geotag when both available', async () => {
+      const thumbnails = [{
+        finalFilename: 'quarantine/test-session-id/photo1.jpg',
+        thumbnailBlobPath: 'quarantine/test-session-id/photo1-thumbnail.jpg',
+        fileSizeBytes: 1024,
+        dateTaken: '2026-03-10',
+        geotag: 'NY12345'
+      }]
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(getPayload().mediaUpload.images[0].metadata).toMatchObject({
+        dateTaken: '2026-03-10',
+        geotag: 'NY12345'
+      })
+    })
+
+    it('processes multiple images with different metadata', async () => {
+      const thumbnails = [
+        {
+          finalFilename: 'quarantine/test-session-id/photo1.jpg',
+          thumbnailBlobPath: 'quarantine/test-session-id/photo1-thumbnail.jpg',
+          fileSizeBytes: 1024,
+          dateTaken: '2026-03-10',
+          geotag: 'NY12345'
+        },
+        {
+          finalFilename: 'quarantine/test-session-id/photo2.jpg',
+          thumbnailBlobPath: 'quarantine/test-session-id/photo2-thumbnail.jpg',
+          fileSizeBytes: 2048,
+          dateTaken: '2026-03-11'
+        },
+        {
+          finalFilename: 'quarantine/test-session-id/photo3.jpg',
+          thumbnailBlobPath: 'quarantine/test-session-id/photo3-thumbnail.jpg',
+          fileSizeBytes: 1536
+        }
+      ]
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      const images = getPayload().mediaUpload.images
+      expect(images[0].metadata.dateTaken).toBe('2026-03-10')
+      expect(images[0].metadata.geotag).toBe('NY12345')
+      expect(images[1].metadata.dateTaken).toBe('2026-03-11')
+      expect(images[1].metadata.geotag).toBeNull()
+      expect(images[2].metadata.dateTaken).toBeNull()
+      expect(images[2].metadata.geotag).toBeNull()
+    })
   })
 })
