@@ -108,12 +108,12 @@ describe('image-checker', () => {
     expect(result.response[0].severityScores).toBe('Hate:4')
   })
 
-  it('sets shouldBlockAny false for validate response payload format', async () => {
+  it('sets shouldBlockAny true when non-violence review severity exists', async () => {
     mockTokenCall()
     mockImageAnalyzeCall([{ category: 'Hate', severity: 4 }])
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
-    expect(result.shouldBlockAny).toBe(false)
+    expect(result.shouldBlockAny).toBe(true)
   })
 
   it('sets shouldBlockAny false when only violence review severity exists', async () => {
