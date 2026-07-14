@@ -81,6 +81,17 @@ describe(url, () => {
       await submitGetRequest({ url }, header, constants.statusCodes.OK)
       expect(cacheGetSpy).toHaveBeenCalledWith('test-session-id')
     })
+
+    it('should render the 500 page when the cache is unavailable', async () => {
+      getServer().app.mediaUploadCache.get = jest.fn().mockRejectedValue(new Error('cache down'))
+      const response = await submitGetRequest(
+        { url },
+        'Sorry, there is a problem with the service',
+        constants.statusCodes.PROBLEM_WITH_SERVICE
+      )
+      expect(response.payload).toContain('Try again later.')
+      expect(response.payload).toContain('Your photo has not been uploaded. When the service is available, you will need to upload it again.')
+    })
   })
   describe('POST', () => {
     it(`Should return redirect response for ${constants.routes.UPLOAD_PHOTO}`, async () => {
