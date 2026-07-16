@@ -81,6 +81,10 @@ const buildAIFailResult = (errorMessage = 'AI validation failed') => ({
 })
 
 const validateSingleImage = async (containerClient, image, accessToken) => {
+  if (image.aiResizeFailed) {
+    return buildAIFailResult('Image resize preparation failed')
+  }
+
   const aiBuffer = image.aiCheckerImage
     ? Buffer.from(image.aiCheckerImage, 'base64')
     : await containerClient.getBlobClient(image.finalFilename).downloadToBuffer()
@@ -93,6 +97,7 @@ const validateSingleImage = async (containerClient, image, accessToken) => {
 
   const categories = result.categoriesAnalysis
   const scores = categories.map(({ category, severity }) => `${category}:${severity}`).join(', ')
+
   console.log(`Content Safety severity scores for ${image.finalFilename}: ${scores}`)
 
   return {
@@ -115,6 +120,7 @@ const validateWithRetry = async (containerClient, image, accessToken, maxRetries
   }
 
   console.log(`Content Safety severity scores for ${image.finalFilename}: AIFail:${AI_FAIL_SEVERITY}`)
+
   return buildAIFailResult('Content Safety API failed after 3 attempts')
 }
 

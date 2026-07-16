@@ -49,6 +49,33 @@ function addThumbnailBySirId (request, thumbnail, sirid = getSirIdFromRequest(re
   return existingUploads[sirid].thumbnails
 }
 
+function updateThumbnailBySirId (request, finalFilename, updates = {}, sirid = getSirIdFromRequest(request)) {
+  if (!sirid || !finalFilename) {
+    return null
+  }
+
+  const existingUploads = getExistingUploads(request)
+  const thumbnails = existingUploads[sirid]?.thumbnails
+
+  if (!Array.isArray(thumbnails)) {
+    return null
+  }
+
+  const index = thumbnails.findIndex(thumbnail => thumbnail.finalFilename === finalFilename)
+
+  if (index < 0) {
+    return null
+  }
+
+  thumbnails[index] = {
+    ...thumbnails[index],
+    ...updates
+  }
+
+  setExistingUploads(request, existingUploads)
+  return thumbnails[index]
+}
+
 function removeThumbnailFromSession (request, imageIndex, sirid = getSirIdFromRequest(request)) {
   const existingUploads = getExistingUploads(request)
   const sessionDetails = sirid && existingUploads[sirid]
@@ -60,6 +87,7 @@ function removeThumbnailFromSession (request, imageIndex, sirid = getSirIdFromRe
   }
 
   const [removed] = thumbnails.splice(idx, 1)
+
   setExistingUploads(request, existingUploads)
   return removed
 }
@@ -169,6 +197,7 @@ export {
   getSessionDetailsBySirId,
   getThumbnailsBySirId,
   addThumbnailBySirId,
+  updateThumbnailBySirId,
   removeThumbnailFromSession,
   clearSessionDetailsBySirId
 }

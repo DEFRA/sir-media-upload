@@ -3,6 +3,7 @@ import path from 'path'
 import imageChecker from '../../services/image-checker.js'
 import { getUploadContainerClient, moveBlobToFolder } from '../../services/blob-storage.js'
 import { sendMessage } from '../../services/service-bus.js'
+import { getSendPhotosValidation } from '../../services/image-check-background.js'
 import { hasValidSirId, getThumbnailsBySirId, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
 
 const harmfulContent = 'quarantine/harmful-content'
@@ -80,7 +81,15 @@ const handlers = {
     const { sirid } = request.query
     const images = getThumbnailsBySirId(request)
     const uploadContainerClient = await getUploadContainerClient()
-    const validationResult = await imageChecker.validate(images)
+    const { ready, validationResult } = await getSendPhotosValidation(request.server, sirid, images)
+
+    if (!ready) {
+      return h.view(constants.views.SEND_PHOTOS, {
+        photos: images.length,
+        sirid,
+        errorMessage: 'We are finishing off checks on your photos. Please wait a moment and try again.'
+      })
+    }
 
     const movedImages = await Promise.all(
       images.map(async (image, index) => {
@@ -101,7 +110,6 @@ const handlers = {
     )
 
     const payload = buildPayload(sirid, movedImages, validationResult, uploadContainerClient.url)
-    console.log('Payload to send to service bus', JSON.stringify(payload, null, 2))
     await sendMessage(request.logger, payload)
     const redirectUrl = `${constants.routes.SUCCESS}?sirid=${sirid}`
     return h.redirect(redirectUrl)

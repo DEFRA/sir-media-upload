@@ -1,9 +1,9 @@
 import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/server.js'
 import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
-import imageChecker from '../../services/image-checker.js'
 import { getUploadContainerClient, moveBlobToFolder } from '../../services/blob-storage.js'
 import { sendMessage } from '../../services/service-bus.js'
+import { getSendPhotosValidation } from '../../services/image-check-background.js'
 
 jest.mock('../../services/blob-storage.js', () => ({
   getUploadContainerClient: jest.fn(),
@@ -12,6 +12,10 @@ jest.mock('../../services/blob-storage.js', () => ({
 
 jest.mock('../../services/service-bus.js', () => ({
   sendMessage: jest.fn()
+}))
+
+jest.mock('../../services/image-check-background.js', () => ({
+  getSendPhotosValidation: jest.fn()
 }))
 
 const baseUrl = constants.routes.SEND_PHOTOS
@@ -26,10 +30,23 @@ const generateThumbnails = (count) =>
 
 const getPayload = () => sendMessage.mock.calls[0][1]
 
+const buildValidationResultForImages = (images = [], resultFactory = () => ({
+  categoriesAnalysis: [{ category: 'Violence', severity: 0 }],
+  severityScores: 'Violence:0',
+  shouldBlock: false
+})) => ({
+  success: true,
+  skipped: false,
+  response: images.map((image, index) => resultFactory(image, index))
+})
+
 describe(baseUrl, () => {
   beforeEach(() => {
-    jest.spyOn(imageChecker, 'validate').mockResolvedValue({ success: true, skipped: true })
     getUploadContainerClient.mockResolvedValue({ url: 'https://storage-account/sir-media-uploads' })
+    getSendPhotosValidation.mockImplementation(async (_server, _sirid, images = []) => ({
+      ready: true,
+      validationResult: buildValidationResultForImages(images)
+    }))
     moveBlobToFolder.mockImplementation(async (_client, sourcePath, destFolder) => {
       const parts = sourcePath.split('/')
       parts[0] = destFolder
@@ -78,10 +95,39 @@ describe(baseUrl, () => {
       expect(response.headers.location).toBe(constants.routes.LINK_USED)
     })
 
-    it('passes session thumbnails to image checker', async () => {
+    it('uses worker status for session thumbnails', async () => {
       const thumbnails = generateThumbnails(2)
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
-      expect(imageChecker.validate).toHaveBeenCalledWith(thumbnails)
+      expect(getSendPhotosValidation).toHaveBeenCalledWith(expect.any(Object), 'test-session-id', thumbnails)
+    })
+
+    it('uses background validation result when complete', async () => {
+      const thumbnails = generateThumbnails(1)
+      getSendPhotosValidation.mockImplementationOnce(async (_server, _sirid, images = []) => {
+        return {
+          ready: true,
+          validationResult: buildValidationResultForImages(images, () => ({
+            categoriesAnalysis: [{ category: 'Violence', severity: 4 }],
+            severityScores: 'Violence:4',
+            shouldBlock: false
+          }))
+        }
+      })
+
+      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+
+      expect(moveBlobToFolder).toHaveBeenNthCalledWith(1, expect.anything(), thumbnails[0].finalFilename, 'cleared')
+    })
+
+    it('returns processing message when any image is still pending', async () => {
+      const thumbnails = generateThumbnails(1)
+      getSendPhotosValidation.mockResolvedValueOnce({
+        ready: false,
+        validationResult: null
+      })
+
+      const response = await submitPostRequest({ url }, constants.statusCodes.OK, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(response.payload).toContain('We are finishing off checks on your photos. Please wait a moment and try again.')
     })
 
     it('moves each image and thumbnail', async () => {
@@ -107,28 +153,42 @@ describe(baseUrl, () => {
       ['SelfHarm', 6, 'quarantine/harmful-content']
     ])('routes %s severity %i to %s', async (category, severity, expectedFolder) => {
       const thumbnails = generateThumbnails(1)
-      imageChecker.validate.mockResolvedValue({
-        success: true,
-        skipped: false,
-        response: [{ categoriesAnalysis: [{ category, severity }] }]
+      getSendPhotosValidation.mockImplementationOnce(async (_server, _sirid, images = []) => {
+        return {
+          ready: true,
+          validationResult: buildValidationResultForImages(images, () => ({
+            categoriesAnalysis: [{ category, severity }],
+            severityScores: `${category}:${severity}`,
+            shouldBlock: ['Hate', 'Sexual', 'SelfHarm'].includes(category) && (severity === 4 || severity === 6)
+          }))
+        }
       })
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(moveBlobToFolder).toHaveBeenNthCalledWith(1, expect.anything(), thumbnails[0].finalFilename, expectedFolder)
     })
 
-    it('routes image to harmful content when ai response entry is missing', async () => {
+    it('shows processing message when ai status entry is missing', async () => {
       const thumbnails = generateThumbnails(1)
-      imageChecker.validate.mockResolvedValue({ success: true, skipped: false, response: [] })
-      await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
-      expect(moveBlobToFolder).toHaveBeenNthCalledWith(1, expect.anything(), thumbnails[0].finalFilename, 'quarantine/harmful-content')
+      getSendPhotosValidation.mockResolvedValueOnce({
+        ready: false,
+        validationResult: null
+      })
+      const response = await submitPostRequest({ url }, constants.statusCodes.OK, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
+      expect(response.payload).toContain('We are finishing off checks on your photos. Please wait a moment and try again.')
+      expect(moveBlobToFolder).not.toHaveBeenCalled()
     })
 
     it('routes thumbnail to harmful content when ai marks image as blocked', async () => {
       const thumbnails = generateThumbnails(1)
-      imageChecker.validate.mockResolvedValue({
-        success: true,
-        skipped: false,
-        response: [{ categoriesAnalysis: [{ category: 'Sexual', severity: 6 }] }]
+      getSendPhotosValidation.mockImplementationOnce(async (_server, _sirid, images = []) => {
+        return {
+          ready: true,
+          validationResult: buildValidationResultForImages(images, () => ({
+            categoriesAnalysis: [{ category: 'Sexual', severity: 6 }],
+            severityScores: 'Sexual:6',
+            shouldBlock: true
+          }))
+        }
       })
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(moveBlobToFolder).toHaveBeenNthCalledWith(2, expect.anything(), thumbnails[0].thumbnailBlobPath, 'quarantine/harmful-content')
@@ -158,7 +218,12 @@ describe(baseUrl, () => {
 
     it('uses none severity score when ai response is absent', async () => {
       const thumbnails = generateThumbnails(1)
-      imageChecker.validate.mockResolvedValue({ success: true, skipped: false, response: [] })
+      getSendPhotosValidation.mockImplementationOnce(async (_server, _sirid, images = []) => {
+        return {
+          ready: true,
+          validationResult: buildValidationResultForImages(images, () => ({}))
+        }
+      })
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
       expect(getPayload().mediaUpload.images[0].severityScores).toBe('none')
     })

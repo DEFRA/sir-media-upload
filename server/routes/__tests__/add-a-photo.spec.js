@@ -9,6 +9,7 @@ import sharp from 'sharp'
 import heicConvert from 'heic-convert'
 import * as addPhoto from '../media/add-a-photo.js'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
+import { queueImageCheckInBackground } from '../../services/image-check-background.js'
 import config from '../../utils/config.js'
 
 jest.mock('../../services/blob-storage.js', () => ({
@@ -17,17 +18,15 @@ jest.mock('../../services/blob-storage.js', () => ({
 
 jest.mock('heic-convert', () => jest.fn())
 
+jest.mock('../../services/image-check-background.js', () => ({
+  queueImageCheckInBackground: jest.fn()
+}))
+
 const mockValidPng = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+5e0AAAAASUVORK5CYII=',
   'base64'
 )
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024
-const UPLOAD_MAX_BYTES = 4 * 1024 * 1024
-const MAX_IMAGE_RESIZE_DEPTH = 5
-const MAX_IMAGE_DIMENSION = 7200
-
-const isWithinBase64UploadLimit = (buffer) => buffer.toString('base64').length <= UPLOAD_MAX_BYTES
-const RAW_BYTES_UNDER_BASE64_LIMIT = Math.floor((UPLOAD_MAX_BYTES * 3) / 4)
 
 const createForm = (filename = '', content = 'data', contentType = 'image/png') => {
   const form = new FormData()
@@ -57,6 +56,7 @@ const header = 'Add a photo'
 
 describe(baseUrl, () => {
   beforeEach(() => {
+    queueImageCheckInBackground.mockResolvedValue(undefined)
     getUploadContainerClient.mockResolvedValue({
       getBlockBlobClient: () => ({
         uploadData: () => Promise.resolve(),
@@ -358,218 +358,21 @@ describe(baseUrl, () => {
     })
 
     describe('file size', () => {
-      it('creates an oversized image for reduction scenario', async () => {
-        const oversizedResizableImage = await createNoiseImageBuffer({
-          width: 2400,
-          height: 2000,
-          format: 'png'
-        })
-        expect(oversizedResizableImage.length).toBeGreaterThan(UPLOAD_MAX_BYTES)
-      })
-
-      it('reduces oversized image to jpg format', async () => {
-        const oversizedResizableImage = await createNoiseImageBuffer({
-          width: 2400,
-          height: 2000,
-          format: 'png'
-        })
-        const reducedImageResult = await addPhoto.convertImageSize(oversizedResizableImage, '.png')
-        expect(reducedImageResult.extension).toBe('.jpg')
-      })
-
-      it('reduces oversized image to within upload limit', async () => {
-        const oversizedResizableImage = await createNoiseImageBuffer({
-          width: 2400,
-          height: 2000,
-          format: 'png'
-        })
-        const reducedImageResult = await addPhoto.convertImageSize(oversizedResizableImage, '.png')
-        expect(isWithinBase64UploadLimit(reducedImageResult.buffer)).toBe(true)
-      })
-
-      it('should throw FILE_TOO_LARGE at max processing depth when still oversized', async () => {
-        const oversizedBuffer = Buffer.alloc(UPLOAD_MAX_BYTES + 1)
-        await expect(addPhoto.convertImageSize(
-          oversizedBuffer,
-          '.png',
-          MAX_IMAGE_RESIZE_DEPTH,
-          { width: 2000, height: 2000 },
-          false
-        )).rejects.toMatchObject({
-          code: 'FILE_TOO_LARGE'
-        })
-      })
-
-      it('processes very tall narrow image within max dimension limit', async () => {
-        const narrowOversizedImage = await createNoiseImageBuffer({
-          width: 320,
-          height: 30000,
-          format: 'png'
-        })
-
-        const resizedResult = await addPhoto.convertImageSize(narrowOversizedImage, '.png')
-        const metadata = await sharp(resizedResult.buffer).metadata()
-
-        expect(metadata.height).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
-      })
-
-      it('processes very tall narrow image within upload limit', async () => {
-        const narrowOversizedImage = await createNoiseImageBuffer({
-          width: 320,
-          height: 30000,
-          format: 'png'
-        })
-
-        const resizedResult = await addPhoto.convertImageSize(narrowOversizedImage, '.png')
-        expect(isWithinBase64UploadLimit(resizedResult.buffer)).toBe(true)
-      })
-
-      it('scales down image dimensions when width exceeds max dimension', async () => {
-        const overDimensionImage = await createNoiseImageBuffer({
-          width: 9000,
-          height: 200,
-          format: 'png'
-        })
-
-        const resizedResult = await addPhoto.convertImageSize(overDimensionImage, '.png')
-        const metadata = await sharp(resizedResult.buffer).metadata()
-
-        expect(metadata.width).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
-      })
-
-      it('scales down width when exceedsMaxDimension is under upload limit', async () => {
-        const overDimensionImage = await sharp({
-          create: {
-            width: 9000,
-            height: 200,
-            channels: 3,
-            background: { r: 255, g: 255, b: 255 }
-          }
-        }).png().toBuffer()
-
-        expect(isWithinBase64UploadLimit(overDimensionImage)).toBe(true)
-
-        const resizedResult = await addPhoto.convertImageSize(
-          overDimensionImage,
-          '.png',
-          0,
-          { width: 9000, height: 200 },
-          true
-        )
-        const metadata = await sharp(resizedResult.buffer).metadata()
-
-        expect(metadata.width).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
-      })
-
-      it('scales down image dimensions when height exceeds max dimension', async () => {
-        const overDimensionImage = await createNoiseImageBuffer({
-          width: 200,
-          height: 9000,
-          format: 'png'
-        })
-
-        const resizedResult = await addPhoto.convertImageSize(overDimensionImage, '.png')
-        const metadata = await sharp(resizedResult.buffer).metadata()
-
-        expect(metadata.height).toBeLessThanOrEqual(MAX_IMAGE_DIMENSION)
-      })
-
-      it('uses provided metadata without re-reading metadata on initial call', async () => {
-        const oversizedResizableImage = await createNoiseImageBuffer({
-          width: 2400,
-          height: 2000,
-          format: 'png'
-        })
-
-        const metadataSpy = jest.spyOn(sharp.prototype, 'metadata')
-
-        await addPhoto.convertImageSize(
-          oversizedResizableImage,
-          '.png',
-          0,
-          { width: 2400, height: 2000 },
-          false
-        )
-
-        expect(metadataSpy).not.toHaveBeenCalled()
-      })
-
-      it('exhausts quality levels then resizes and recurses for wide oversized image as jpg', async () => {
-        const wideOversizedImage = await createNoiseImageBuffer({
-          width: 4200,
-          height: 4200,
-          format: 'png'
-        })
-
-        const resizedResult = await addPhoto.convertImageSize(wideOversizedImage, '.png')
-        expect(resizedResult.extension).toBe('.jpg')
-      })
-
-      it('exhausts quality levels then resizes and recurses for wide oversized image within upload limit', async () => {
-        const wideOversizedImage = await createNoiseImageBuffer({
-          width: 4200,
-          height: 4200,
-          format: 'png'
-        })
-
-        const resizedResult = await addPhoto.convertImageSize(wideOversizedImage, '.png')
-        expect(isWithinBase64UploadLimit(resizedResult.buffer)).toBe(true)
-      })
-
-      it('throws FILE_TOO_LARGE when fallback image metadata has no width and fallback output is still too large', async () => {
-        jest.spyOn(sharp.prototype, 'metadata').mockResolvedValue({})
-        jest.spyOn(sharp.prototype, 'toBuffer')
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-        await expect(
-          addPhoto.convertImageSize(Buffer.alloc(UPLOAD_MAX_BYTES + 1000), '.png')
-        ).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' })
-      })
-
-      it('returns jpg when image width is at minimum threshold and fallback output is within upload limit', async () => {
-        jest.spyOn(sharp.prototype, 'metadata').mockResolvedValue({ width: 320 })
-        jest.spyOn(sharp.prototype, 'toBuffer')
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(RAW_BYTES_UNDER_BASE64_LIMIT - 10))
-        const resizedResult = await addPhoto.convertImageSize(Buffer.alloc(UPLOAD_MAX_BYTES + 1000), '.png')
-        expect(resizedResult.extension).toBe('.jpg')
-      })
-
-      it('should return file too large message when upload processing exceeds 4MB', async () => {
+      it('still accepts oversized images here because AI resize runs later', async () => {
         const oversizedUploadImage = await createNoiseImageBuffer({
-          width: 1700,
-          height: 1500,
+          width: 2400,
+          height: 2000,
           format: 'png'
         })
 
-        jest.spyOn(sharp.prototype, 'metadata')
-          .mockResolvedValueOnce({ format: 'png' })
-          .mockResolvedValueOnce({ width: 320 })
-        jest.spyOn(sharp.prototype, 'toBuffer')
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
-          .mockResolvedValueOnce(Buffer.alloc(UPLOAD_MAX_BYTES + 10))
         const form = createForm('valid.png', oversizedUploadImage, 'image/png')
         const response = await submitPostRequest({
           url,
           payload: form.getBuffer(),
           headers: form.getHeaders()
-        }, 200)
-        expect(response.result).toContain('The selected file must be smaller than 4MB')
+        }, constants.statusCodes.REDIRECT)
+
+        expect(response.headers.location).toBe(`${constants.routes.YOUR_PHOTOS}?sirid=test-session-id`)
       })
 
       it('should return payload max-size message when payload exceeds PAYLOAD_MAX_BYTES', async () => {
@@ -849,7 +652,6 @@ describe(baseUrl, () => {
 
       it('should store extracted date metadata in session', async () => {
         jest.spyOn(addPhoto, 'convertImageType').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
-        jest.spyOn(addPhoto, 'convertImageSize').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
 
         getUploadContainerClient.mockResolvedValue({
           getBlockBlobClient: () => ({
@@ -861,7 +663,6 @@ describe(baseUrl, () => {
         })
 
         jest.spyOn(addPhoto, 'pollForScanTag').mockResolvedValue({ 'Malware Scanning scan result': 'No threats found' })
-        jest.spyOn(addPhoto, 'convertImageSize').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
 
         const form = createForm('photo.png', mockValidPng, 'image/png')
         const response = await submitPostRequest({
@@ -877,7 +678,6 @@ describe(baseUrl, () => {
 
       it('should store extracted GPS metadata in session', async () => {
         jest.spyOn(addPhoto, 'convertImageType').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
-        jest.spyOn(addPhoto, 'convertImageSize').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
 
         getUploadContainerClient.mockResolvedValue({
           getBlockBlobClient: () => ({
@@ -904,7 +704,6 @@ describe(baseUrl, () => {
 
       it('should store null values when metadata not available', async () => {
         jest.spyOn(addPhoto, 'convertImageType').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
-        jest.spyOn(addPhoto, 'convertImageSize').mockResolvedValue({ buffer: mockValidPng, extension: '.png' })
 
         getUploadContainerClient.mockResolvedValue({
           getBlockBlobClient: () => ({
