@@ -36,7 +36,6 @@ const handlers = {
     }
 
     const imageIndex = Number.parseInt(request.payload.imageIndex, 10)
-    const { sirid } = request.query
     const removed = removeThumbnailFromSession(request, imageIndex)
 
     if (removed) {

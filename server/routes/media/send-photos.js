@@ -3,7 +3,7 @@ import path from 'path'
 import imageChecker from '../../services/image-checker.js'
 import { getUploadContainerClient, moveBlobToFolder } from '../../services/blob-storage.js'
 import { sendMessage } from '../../services/service-bus.js'
-import { getSendPhotosValidation } from '../../services/image-check-background.js'
+import { waitForValidation } from '../../services/image-check-background.js'
 import { hasValidSirId, getThumbnailsBySirId, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
 
 const harmfulContent = 'quarantine/harmful-content'
@@ -81,15 +81,7 @@ const handlers = {
     const { sirid } = request.query
     const images = getThumbnailsBySirId(request)
     const uploadContainerClient = await getUploadContainerClient()
-    const { ready, validationResult } = await getSendPhotosValidation(request.server, sirid, images)
-
-    if (!ready) {
-      return h.view(constants.views.SEND_PHOTOS, {
-        photos: images.length,
-        sirid,
-        errorMessage: 'We are finishing off checks on your photos. Please wait a moment and try again.'
-      })
-    }
+    const { validationResult } = await waitForValidation(request.server, sirid, images)
 
     const movedImages = await Promise.all(
       images.map(async (image, index) => {

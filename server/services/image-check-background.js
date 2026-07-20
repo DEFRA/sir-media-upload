@@ -145,8 +145,19 @@ const getSendPhotosValidation = async (server, sirid, images = []) => {
   }
 }
 
+const waitForValidation = async (server, sirid, images = [], { intervalMs = 500, maxAttempts = 20 } = {}) => {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const result = await getSendPhotosValidation(server, sirid, images)
+    if (result.ready) {
+      return result
+    }
+    await new Promise(resolve => setTimeout(resolve, intervalMs))
+  }
+  return getSendPhotosValidation(server, sirid, images)
+}
+
 export {
   queueImageCheckInBackground,
-  getSendPhotosValidation,
+  waitForValidation,
   removeImageCheckStatusByFilename
 }
