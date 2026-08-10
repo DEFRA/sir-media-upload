@@ -350,6 +350,9 @@ const handlers = {
           })
 
         default:
+          console.log('-----------------------')
+          console.log(err)
+          console.log('-----------------------')
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'The selected file could not be uploaded – try again',
