@@ -219,5 +219,35 @@ describe('blob-storage', () => {
         expect(result2).toBe('final/photo2.jpg')
       })
     })
+
+    describe('when the filename contains URI-sensitive characters', () => {
+      it('should encode only the filename part in the destination path', async () => {
+        const { sourceBlob, destBlob } = createBlobMocks()
+        const containerClient = {
+          getBlockBlobClient: jest.fn((path) =>
+            path === 'original/nested/folder/file name#.jpg' ? sourceBlob : destBlob
+          )
+        }
+
+        const result = await moveBlobToFolder(containerClient, 'original/nested/folder/file name#.jpg', 'archived')
+
+        expect(result).toBe('archived/nested/folder/file name%23.jpg')
+        expect(containerClient.getBlockBlobClient).toHaveBeenCalledWith('archived/nested/folder/file name%23.jpg')
+      })
+
+      it('should encode percent signs in the filename to avoid unsafe literal percent characters', async () => {
+        const { sourceBlob, destBlob } = createBlobMocks()
+        const containerClient = {
+          getBlockBlobClient: jest.fn((path) =>
+            path === 'original/photo%23.jpg' ? sourceBlob : destBlob
+          )
+        }
+
+        const result = await moveBlobToFolder(containerClient, 'original/photo%23.jpg', 'processed')
+
+        expect(result).toBe('processed/photo%2523.jpg')
+        expect(containerClient.getBlockBlobClient).toHaveBeenCalledWith('processed/photo%2523.jpg')
+      })
+    })
   })
 })

@@ -48,6 +48,10 @@ const getUploadContainerClient = async () => {
 const moveBlobToFolder = async (containerClient, sourcePath, destFolder) => {
   const pathParts = sourcePath.split('/')
   pathParts[0] = destFolder
+
+  const filenameIndex = pathParts.length - 1
+  pathParts[filenameIndex] = encodeURIComponent(pathParts[filenameIndex]).replace(/%20/g, ' ')
+
   const destPath = pathParts.join('/')
 
   const sourceBlob = containerClient.getBlockBlobClient(sourcePath)
