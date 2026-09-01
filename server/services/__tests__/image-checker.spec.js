@@ -87,6 +87,20 @@ describe('image-checker', () => {
     expect(payload.image.content).toBe(aiCheckerImage)
   })
 
+  it('returns AIFail when image resize preparation failed', async () => {
+    const container = createContainer()
+    mockTokenCall()
+    blobStorage.getUploadContainerClient.mockResolvedValue(container)
+
+    const result = await imageChecker.validate([
+      { finalFilename: 'a.jpg', aiResizeFailed: true }
+    ])
+
+    expect(result.response[0].severityScores).toBe('AIFail:8')
+    expect(container.getBlobClient).not.toHaveBeenCalled()
+    expect(wreck.post).toHaveBeenCalledTimes(1)
+  })
+
   it('returns severityScores with all categories at 0 when nothing detected', async () => {
     mockTokenCall()
     mockImageAnalyzeCall([
@@ -168,34 +182,24 @@ describe('image-checker', () => {
     expect(result.success && !result.skipped).toBe(true)
   })
 
-  it('logs content safety severity scores during validation', async () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
+  it('retries and returns severity scores during validation', async () => {
     mockTokenCall()
     wreck.post
       .mockRejectedValueOnce(new Error('timeout'))
       .mockResolvedValueOnce({ payload: { categoriesAnalysis: [{ category: 'Hate', severity: 4 }] } })
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
-    await imageChecker.validate([{ finalFilename: 'test-image.jpg' }])
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Content Safety API attempt 1/3 failed for test-image.jpg')
-    )
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Content Safety severity scores for test-image.jpg: Hate:4')
-    )
-    consoleSpy.mockRestore()
+    const result = await imageChecker.validate([{ finalFilename: 'test-image.jpg' }])
+    expect(result.response[0].severityScores).toBe('Hate:4')
+    expect(wreck.post).toHaveBeenCalledTimes(3)
   })
 
   it('returns AIFail after all retry attempts fail', async () => {
-    const consoleSpy = jest.spyOn(console, 'log').mockImplementation()
     mockTokenCall()
     wreck.post.mockRejectedValue(new Error('service unavailable'))
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'test-image.jpg' }])
     expect(result.response[0].severityScores).toBe('AIFail:8')
-    expect(consoleSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Content Safety severity scores for test-image.jpg: AIFail:8')
-    )
-    consoleSpy.mockRestore()
+    expect(result.response[0].shouldBlock).toBe(true)
   })
 
   it('sets shouldBlock false when violence category at review severity', () => {
