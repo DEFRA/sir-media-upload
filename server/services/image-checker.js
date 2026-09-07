@@ -1,4 +1,4 @@
-import { getUploadContainerClient } from './blob-storage.js'
+import { getAIImageBlobUrl, getUploadContainerClient } from './blob-storage.js'
 import config from '../utils/config.js'
 import wreck from '@hapi/wreck'
 
@@ -32,7 +32,7 @@ const getAccessToken = async () => {
   }
 }
 
-const callAIContentSafetyAPIM = async (accessToken, imageBuffer) => {
+const callAIContentSafetyAPIM = async (accessToken, imageUrl) => {
   try {
     const response = await wreck.post(contentSafetyAPIMEndpoint, {
       headers: {
@@ -40,7 +40,7 @@ const callAIContentSafetyAPIM = async (accessToken, imageBuffer) => {
         'Content-Type': 'application/json'
       },
       payload: JSON.stringify({
-        image: { content: imageBuffer.toString('base64') },
+        image: { blobUrl: imageUrl },
         categories: ['Hate', 'SelfHarm', 'Sexual', 'Violence'],
         outputType: 'FourSeverityLevels'
       }),
@@ -81,11 +81,8 @@ const buildAIFailResult = (errorMessage = 'AI validation failed') => ({
 })
 
 const validateSingleImage = async (containerClient, image, accessToken) => {
-  const aiBuffer = image.aiCheckerImage
-    ? Buffer.from(image.aiCheckerImage, 'base64')
-    : await containerClient.getBlobClient(image.finalFilename).downloadToBuffer()
-
-  const result = await callAIContentSafetyAPIM(accessToken, aiBuffer)
+  const imageUrl = getAIImageBlobUrl(containerClient.getBlobClient(image.finalFilename))
+  const result = await callAIContentSafetyAPIM(accessToken, imageUrl)
 
   if (!result?.categoriesAnalysis) {
     throw new Error('Unexpected response from Azure Content Safety API')
