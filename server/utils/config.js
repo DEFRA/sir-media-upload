@@ -1,5 +1,6 @@
 import Joi from 'joi'
 const envs = ['development', 'test', 'production']
+const deploymentEnvs = ['development', 'test', 'training']
 const defaultPort = 8000
 const defaultRedisPort = 6379
 
@@ -16,12 +17,19 @@ export const updateBaseUrl = urlString => {
   return `https://${value}`
 }
 
+const getDeploymentEnv = deploymentEnv =>
+  deploymentEnvs.includes(deploymentEnv) ? deploymentEnv : null
+
 // Define config schema
 const schema = Joi.object().keys({
   env: Joi
     .string()
     .valid(...envs)
     .default(envs[0]),
+  deploymentEnv: Joi
+    .string()
+    .valid(...deploymentEnvs)
+    .allow(null),
   servicePort: Joi.number().default(defaultPort),
   redisHost: Joi.string().default('localhost'),
   redisPort: Joi.number().default(defaultRedisPort),
@@ -49,6 +57,7 @@ const schema = Joi.object().keys({
 // Build config
 const config = {
   env: process.env.NODE_ENV,
+  deploymentEnv: getDeploymentEnv(process.env.DEPLOYMENT_ENV),
   servicePort: process.env.SERVICE_PORT,
   logLevel: process.env.LOG_LEVEL,
   redisHost: process.env.REDIS_HOST,
