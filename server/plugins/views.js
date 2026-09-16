@@ -39,6 +39,7 @@ export default {
     context: {
       appVersion: version,
       env: config.env,
+      deploymentEnv: config.deploymentEnv,
       assetPath: `${config.appPathPrefix}/public`,
       appPathPrefix: config.appPathPrefix,
       govUkHome: constants.urls.GOV_UK_HOME,
