@@ -17,7 +17,7 @@ describe(url, () => {
 
     it(`Should display photo submission information for ${url}`, async () => {
       const response = await submitGetRequest({ url }, header)
-      expect(response.payload).toContain('The Environment Agency will use your photos to help investigate the problem.')
+      expect(response.payload).toContain('The Environment Agency will only contact you if we need more information - you do not need to call us.')
     })
 
     it('should keep sirid query parameter in the page link', async () => {
