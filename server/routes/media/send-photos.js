@@ -9,7 +9,7 @@ import { hasValidSirId, getThumbnailsBySirId, getInvalidSirIdRedirectUrl } from 
 const harmfulContent = 'quarantine/harmful-content'
 
 const getFolderByAIResult = (validationResult, imageIndex) => {
-  if (validationResult.skipped || !validationResult.response) return 'cleared'
+  if (validationResult?.skipped || !validationResult?.response) return harmfulContent
 
   const imageResult = validationResult.response[imageIndex]
   if (!imageResult) {

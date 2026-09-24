@@ -117,10 +117,14 @@ describe(baseUrl, () => {
       expect(moveBlobToFolder).toHaveBeenCalledTimes(4)
     })
 
-    it('routes skipped ai validation images to cleared', async () => {
+    it('routes skipped ai validation images to harmful content', async () => {
       const thumbnails = generateThumbnails(1)
+      waitForValidation.mockResolvedValueOnce({
+        ready: true,
+        validationResult: { success: true, skipped: true }
+      })
       await submitPostRequest({ url }, constants.statusCodes.REDIRECT, { 'existing-uploads': { 'test-session-id': { thumbnails } } })
-      expect(moveBlobToFolder).toHaveBeenNthCalledWith(1, expect.anything(), thumbnails[0].finalFilename, 'cleared')
+      expect(moveBlobToFolder).toHaveBeenNthCalledWith(1, expect.anything(), thumbnails[0].finalFilename, 'quarantine/harmful-content')
     })
 
     it.each([

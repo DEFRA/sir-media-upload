@@ -43,17 +43,19 @@ describe('image-checker', () => {
     expect(result).toEqual({ success: true, skipped: true })
   })
 
-  it('returns skipped when access token cannot be acquired', async () => {
+  it('returns AIFail when access token cannot be acquired', async () => {
     wreck.post.mockRejectedValueOnce(new Error('token failure'))
     blobStorage.getUploadContainerClient.mockResolvedValue(createContainer())
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
-    expect(result).toEqual({ success: true, skipped: true })
+    expect(result.response[0].severityScores).toBe('AIFail:8')
+    expect(result.response[0].shouldBlock).toBe(true)
   })
 
-  it('returns skipped when blob container is unavailable', async () => {
+  it('returns AIFail when blob container is unavailable', async () => {
     blobStorage.getUploadContainerClient.mockResolvedValue(null)
     const result = await imageChecker.validate([{ finalFilename: 'a.jpg' }])
-    expect(result).toEqual({ success: true, skipped: true })
+    expect(result.response[0].severityScores).toBe('AIFail:8')
+    expect(result.response[0].shouldBlock).toBe(true)
   })
 
   it('calls token endpoint and APIM image analyze endpoint', async () => {

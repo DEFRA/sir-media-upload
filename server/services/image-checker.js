@@ -132,13 +132,23 @@ const validate = async (thumbnails = []) => {
   const containerClient = await getUploadContainerClient()
 
   if (!containerClient) {
-    return { success: true, skipped: true }
+    return {
+      success: false,
+      skipped: false,
+      response: thumbnails.map(() => buildAIFailResult('Upload container is unavailable for AI validation')),
+      shouldBlockAny: true
+    }
   }
 
   const accessToken = await getAccessToken()
 
   if (!accessToken) {
-    return { success: true, skipped: true }
+    return {
+      success: false,
+      skipped: false,
+      response: thumbnails.map(() => buildAIFailResult('Unable to acquire AI validation access token')),
+      shouldBlockAny: true
+    }
   }
 
   const response = await Promise.all(
