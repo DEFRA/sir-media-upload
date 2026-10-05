@@ -1,7 +1,8 @@
 import config from './config.js'
 
 const urls = {
-  GOV_UK_HOME: 'https://www.gov.uk'
+  GOV_UK_HOME: 'https://www.gov.uk',
+  GOV_UK_REPORT_ENVIRONMENTAL_PROBLEM: 'https://www.gov.uk/report-environmental-problem'
 }
 
 const PUBLIC = 'public'

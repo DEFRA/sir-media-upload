@@ -43,7 +43,7 @@ export default {
       assetPath: `${config.appPathPrefix}/public`,
       appPathPrefix: config.appPathPrefix,
       govUkHome: constants.urls.GOV_UK_HOME,
-      serviceNameUrl: constants.urls.GOV_UK_SERVICE_HOME,
+      serviceUrl: config.env === 'production' ? constants.urls.GOV_UK_REPORT_ENVIRONMENTAL_PROBLEM : config.smartIncidentReportingBaseUrl,
       serviceName: 'Report an environmental problem',
       pageTitleServiceName: 'report an environmental problem',
       smartIncidentReportingBaseUrl: config.smartIncidentReportingBaseUrl,
