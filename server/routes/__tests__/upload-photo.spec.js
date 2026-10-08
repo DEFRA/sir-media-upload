@@ -1,6 +1,7 @@
 import { getServer } from '../../../.jest/setup.js'
 import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/server.js'
 import constants from '../../utils/constants.js'
+import config from '../../utils/config.js'
 import { returnFormattedDate } from '../../utils/date-helpers.js'
 
 const url = `${constants.routes.UPLOAD_PHOTO}?sirid=test-session-id`
@@ -8,8 +9,13 @@ const header = 'Upload photos'
 const journeyCases = [
   'water pollution',
   'smell',
+  'dust',
+  'mud',
+  'vermin',
+  'noise',
   'blockage',
-  'illegal fishing'
+  'illegal fishing',
+  'litter'
 ]
 
 describe(url, () => {
@@ -60,6 +66,40 @@ describe(url, () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
 
       expect(response.payload).toContain(journey)
+    })
+
+    it.each([
+      ['smell', 'report-smell'],
+      ['dust', 'report-dust'],
+      ['mud', 'report-mud'],
+      ['vermin', 'report-vermin'],
+      ['noise', 'report-noise'],
+      ['blockage', 'report-river-blockage'],
+      ['water pollution', 'report-water-pollution'],
+      ['illegal fishing', 'report-illegal-fishing-in-england'],
+      ['litter', 'report-litter-at-regulated-site']
+    ])('should link the service name to the start page for journey: %s', async (journey, path) => {
+      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue({ journey, dateTime: new Date() })
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
+
+      expect(response.payload).toContain(`href="${config.smartIncidentReportingBaseUrl}/${path}"`)
+    })
+
+    it.each([
+      ['water pollution', 'Report water pollution in England'],
+      ['smell', 'Report a smell from a waste facility, industrial site or farm in England'],
+      ['litter', 'Report litter from a waste facility, industrial site or farm in England'],
+      ['illegal fishing', 'Report illegal fishing in England'],
+      ['blockage', 'Report a blockage in a river in England'],
+      ['noise', 'Report noise from a waste facility, industrial site or farm in England'],
+      ['vermin', 'Report vermin or pest problem from a waste facility, industrial site or farm in England'],
+      ['dust', 'Report dust from a waste facility, industrial site or farm in England'],
+      ['mud', 'Report mud from a waste facility, industrial site or farm in England']
+    ])('should render the service name in the navigation for journey: %s', async (journey, serviceName) => {
+      jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue({ journey, dateTime: new Date() })
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
+
+      expect(response.payload).toContain(serviceName)
     })
 
     it('should render dateTime from cache', async () => {

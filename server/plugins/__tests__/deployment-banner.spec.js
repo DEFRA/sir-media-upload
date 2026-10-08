@@ -5,14 +5,12 @@ const url = constants.routes.TERMS_FOR_UPLOADING_PHOTOS
 
 describe('Deployment Environment Banner', () => {
   const server = { current: null }
-  const originalNodeEnv = process.env.NODE_ENV
 
   afterEach(async () => {
     if (server.current) {
       await server.current.stop()
       server.current = null
     }
-    process.env.NODE_ENV = originalNodeEnv
   })
 
   describe('when DEPLOYMENT_ENV is not set', () => {
@@ -30,8 +28,7 @@ describe('Deployment Environment Banner', () => {
   })
 
   describe('when DEPLOYMENT_ENV is set', () => {
-    it('should link the service name to the report landing page in production', async () => {
-      process.env.NODE_ENV = 'production'
+    it('should link the service name to the GOV.UK report landing page when DEPLOYMENT_ENV is not set', async () => {
       delete process.env.DEPLOYMENT_ENV
       jest.resetModules()
       const { createServer, init } = await import('../../index.js')
@@ -43,8 +40,7 @@ describe('Deployment Environment Banner', () => {
       expect(response.payload).toContain('href="https://www.gov.uk/report-environmental-problem"')
     })
 
-    it('should not link the service name to the report landing page outside production', async () => {
-      process.env.NODE_ENV = 'test'
+    it('should link the service name to the SIR base url when DEPLOYMENT_ENV is set', async () => {
       process.env.DEPLOYMENT_ENV = 'development'
       jest.resetModules()
       const { createServer, init } = await import('../../index.js')
@@ -53,6 +49,7 @@ describe('Deployment Environment Banner', () => {
       await init(server.current)
 
       const response = await server.current.inject({ method: 'GET', url })
+      expect(response.payload).toContain('href="https://sir-base-url.gov.uk"')
       expect(response.payload).not.toContain('href="https://www.gov.uk/report-environmental-problem"')
     })
 

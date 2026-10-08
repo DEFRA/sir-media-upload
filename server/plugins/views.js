@@ -5,7 +5,7 @@ import config from '../utils/config.js'
 import constants from '../utils/constants.js'
 import fs from 'fs'
 import dirname from '../../dirname.cjs'
-import { findErrorMessageById } from '../utils/template-helpers.js'
+import { findErrorMessageById, createJourneyUrl, getJourneyServiceName } from '../utils/template-helpers.js'
 const { version } = JSON.parse(fs.readFileSync('./package.json'))
 
 export default {
@@ -36,18 +36,24 @@ export default {
     ],
     relativeTo: dirname,
     isCached: !config.isDev,
-    context: {
-      appVersion: version,
-      env: config.env,
-      deploymentEnv: config.deploymentEnv,
-      assetPath: `${config.appPathPrefix}/public`,
-      appPathPrefix: config.appPathPrefix,
-      govUkHome: constants.urls.GOV_UK_HOME,
-      serviceUrl: config.env === 'production' ? constants.urls.GOV_UK_REPORT_ENVIRONMENTAL_PROBLEM : config.smartIncidentReportingBaseUrl,
-      serviceName: 'Report an environmental problem',
-      pageTitleServiceName: 'report an environmental problem',
-      smartIncidentReportingBaseUrl: config.smartIncidentReportingBaseUrl,
-      feedbackUrl: `${config.smartIncidentReportingBaseUrl}/feedback`
+    context: request => {
+      const journey = request.yar.id ? request.yar.get('journey') : null
+      const defaultServiceUrl = config.deploymentEnv ? config.smartIncidentReportingBaseUrl : constants.urls.GOV_UK_REPORT_ENVIRONMENTAL_PROBLEM
+
+      return {
+        appVersion: version,
+        env: config.env,
+        deploymentEnv: config.deploymentEnv,
+        assetPath: `${config.appPathPrefix}/public`,
+        appPathPrefix: config.appPathPrefix,
+        govUkHome: constants.urls.GOV_UK_HOME,
+        serviceUrl: journey ? createJourneyUrl(journey) : defaultServiceUrl,
+        navServiceName: getJourneyServiceName(journey) || 'Report an environmental problem',
+        serviceName: 'Report an environmental problem',
+        pageTitleServiceName: 'report an environmental problem',
+        smartIncidentReportingBaseUrl: config.smartIncidentReportingBaseUrl,
+        feedbackUrl: `${config.smartIncidentReportingBaseUrl}/feedback`
+      }
     }
   }
 }
