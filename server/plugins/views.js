@@ -7,6 +7,7 @@ import fs from 'fs'
 import dirname from '../../dirname.cjs'
 import { findErrorMessageById, createJourneyUrl, getJourneyServiceName } from '../utils/template-helpers.js'
 const { version } = JSON.parse(fs.readFileSync('./package.json'))
+const serviceName = 'Report an environmental problem'
 
 export default {
   plugin: vision,
@@ -47,8 +48,8 @@ export default {
         appPathPrefix: config.appPathPrefix,
         govUkHome: constants.urls.GOV_UK_HOME,
         serviceUrl: createJourneyUrl(journey),
-        navServiceName: getJourneyServiceName(journey) || constants.urls.GOV_UK_SERVICE_HOME,
-        serviceName: constants.urls.GOV_UK_SERVICE_HOME,
+        navServiceName: getJourneyServiceName(journey) || serviceName,
+        serviceName,
         pageTitleServiceName: 'report an environmental problem',
         smartIncidentReportingBaseUrl: config.smartIncidentReportingBaseUrl,
         feedbackUrl: `${config.smartIncidentReportingBaseUrl}/feedback`
