@@ -1,7 +1,6 @@
 import { getServer } from '../../../.jest/setup.js'
 import { submitGetRequest, submitPostRequest } from '../../__test-helpers__/server.js'
 import constants from '../../utils/constants.js'
-import config from '../../utils/config.js'
 import { returnFormattedDate } from '../../utils/date-helpers.js'
 
 const url = `${constants.routes.UPLOAD_PHOTO}?sirid=test-session-id`
@@ -69,20 +68,20 @@ describe(url, () => {
     })
 
     it.each([
-      ['smell', 'report-smell'],
-      ['dust', 'report-dust'],
-      ['mud', 'report-mud'],
-      ['vermin', 'report-vermin'],
-      ['noise', 'report-noise'],
-      ['blockage', 'report-river-blockage'],
-      ['water pollution', 'report-water-pollution'],
-      ['illegal fishing', 'report-illegal-fishing-in-england'],
-      ['litter', 'report-litter-at-regulated-site']
-    ])('should link the service name to the start page for journey: %s', async (journey, path) => {
+      ['smell', constants.urls.GOV_UK_SMELL],
+      ['dust', constants.urls.GOV_UK_DUST],
+      ['mud', constants.urls.GOV_UK_MUD],
+      ['vermin', constants.urls.GOV_UK_PESTS],
+      ['noise', constants.urls.GOV_UK_NOISE],
+      ['blockage', constants.urls.GOV_UK_BLOCKAGE],
+      ['water pollution', constants.urls.GOV_UK_WATER_POLLUTION],
+      ['illegal fishing', constants.urls.GOV_UK_ILLEGAL_FISHING],
+      ['litter', constants.urls.GOV_UK_LITTER]
+    ])('should link the service name to the start page for journey: %s', async (journey, journeyUrl) => {
       jest.spyOn(getServer().app.mediaUploadCache, 'get').mockResolvedValue({ journey, dateTime: new Date() })
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK)
 
-      expect(response.payload).toContain(`href="${config.smartIncidentReportingBaseUrl}/${path}"`)
+      expect(response.payload).toContain(`href="${journeyUrl}"`)
     })
 
     it.each([

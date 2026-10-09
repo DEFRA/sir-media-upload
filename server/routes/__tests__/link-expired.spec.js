@@ -20,6 +20,11 @@ describe(url, () => {
       expect(response.payload).toContain('The Environment Agency will only contact you if we need more information - you do not need to call us.')
     })
 
+    it('should link the service name to the gov.uk service home when there is no journey', async () => {
+      const response = await submitGetRequest({ url }, header)
+      expect(response.payload).toContain(`href="${constants.urls.GOV_UK_SERVICE_HOME}"`)
+    })
+
     it('should keep sirid query parameter in the page link', async () => {
       const response = await submitGetRequest({
         url: `${url}?sirid=test-sirid`

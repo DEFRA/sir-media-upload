@@ -1,19 +1,33 @@
 import { createJourneyUrl, getJourneyServiceName } from '../template-helpers.js'
 import config from '../config.js'
+import constants from '../constants.js'
 
 describe('createJourneyUrl', () => {
+  afterEach(() => {
+    config.deploymentEnv = null
+  })
+
   it.each([
-    ['smell', 'report-smell'],
-    ['dust', 'report-dust'],
-    ['mud', 'report-mud'],
-    ['vermin', 'report-vermin'],
-    ['noise', 'report-noise'],
-    ['blockage', 'report-river-blockage'],
-    ['water pollution', 'report-water-pollution'],
-    ['illegal fishing', 'report-illegal-fishing-in-england'],
-    ['litter', 'report-litter-at-regulated-site']
-  ])('should build the start page url for %s', (journey, path) => {
-    expect(createJourneyUrl(journey)).toBe(`${config.smartIncidentReportingBaseUrl}/${path}`)
+    ['smell', constants.urls.GOV_UK_SMELL],
+    ['dust', constants.urls.GOV_UK_DUST],
+    ['mud', constants.urls.GOV_UK_MUD],
+    ['vermin', constants.urls.GOV_UK_PESTS],
+    ['noise', constants.urls.GOV_UK_NOISE],
+    ['blockage', constants.urls.GOV_UK_BLOCKAGE],
+    ['water pollution', constants.urls.GOV_UK_WATER_POLLUTION],
+    ['illegal fishing', constants.urls.GOV_UK_ILLEGAL_FISHING],
+    ['litter', constants.urls.GOV_UK_LITTER]
+  ])('should return the gov.uk start page url for %s when DEPLOYMENT_ENV is not set', (journey, journeyUrl) => {
+    expect(createJourneyUrl(journey)).toBe(journeyUrl)
+  })
+
+  it.each(['unknown', undefined, null])('should return the gov.uk service home url for journey %s when DEPLOYMENT_ENV is not set', journey => {
+    expect(createJourneyUrl(journey)).toBe(constants.urls.GOV_UK_SERVICE_HOME)
+  })
+
+  it.each(['development', 'test', 'training'])('should return the base url without a journey path when DEPLOYMENT_ENV is %s', deploymentEnv => {
+    config.deploymentEnv = deploymentEnv
+    expect(createJourneyUrl('smell')).toBe(config.smartIncidentReportingBaseUrl)
   })
 })
 

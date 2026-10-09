@@ -2,7 +2,16 @@ import config from './config.js'
 
 const urls = {
   GOV_UK_HOME: 'https://www.gov.uk',
-  GOV_UK_REPORT_ENVIRONMENTAL_PROBLEM: 'https://www.gov.uk/report-environmental-problem'
+  GOV_UK_SERVICE_HOME: 'https://www.gov.uk/report-environmental-problem',
+  GOV_UK_WATER_POLLUTION: 'https://www.gov.uk/report-water-pollution',
+  GOV_UK_SMELL: 'https://www.gov.uk/report-smell',
+  GOV_UK_ILLEGAL_FISHING: 'https://www.gov.uk/report-illegal-fishing-in-england',
+  GOV_UK_BLOCKAGE: 'https://www.gov.uk/report-river-blockage',
+  GOV_UK_NOISE: 'https://www.gov.uk/report-noise',
+  GOV_UK_LITTER: 'https://www.gov.uk/report-litter-at-regulated-site',
+  GOV_UK_PESTS: 'https://www.gov.uk/report-vermin',
+  GOV_UK_DUST: 'https://www.gov.uk/report-dust',
+  GOV_UK_MUD: 'https://www.gov.uk/report-mud'
 }
 
 const PUBLIC = 'public'

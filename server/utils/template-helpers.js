@@ -1,4 +1,5 @@
 import config from './config.js'
+import constants from './constants.js'
 
 // This is a location for storing helpers that are used by front end nunjucks templates
 
@@ -6,16 +7,16 @@ const findErrorMessageById = (errorSummary, id) => {
   return errorSummary?.errorList?.find(error => error.href === `#${id}`)
 }
 
-const journeyPaths = {
-  smell: 'report-smell',
-  dust: 'report-dust',
-  mud: 'report-mud',
-  vermin: 'report-vermin',
-  noise: 'report-noise',
-  blockage: 'report-river-blockage',
-  'water pollution': 'report-water-pollution',
-  'illegal fishing': 'report-illegal-fishing-in-england',
-  litter: 'report-litter-at-regulated-site'
+const journeyUrls = {
+  smell: constants.urls.GOV_UK_SMELL,
+  dust: constants.urls.GOV_UK_DUST,
+  mud: constants.urls.GOV_UK_MUD,
+  vermin: constants.urls.GOV_UK_PESTS,
+  noise: constants.urls.GOV_UK_NOISE,
+  blockage: constants.urls.GOV_UK_BLOCKAGE,
+  'water pollution': constants.urls.GOV_UK_WATER_POLLUTION,
+  'illegal fishing': constants.urls.GOV_UK_ILLEGAL_FISHING,
+  litter: constants.urls.GOV_UK_LITTER
 }
 
 const journeyServiceNames = {
@@ -31,7 +32,11 @@ const journeyServiceNames = {
 }
 
 const createJourneyUrl = journey => {
-  return `${config.smartIncidentReportingBaseUrl}/${journeyPaths[journey]}`
+  if (config.deploymentEnv) {
+    return config.smartIncidentReportingBaseUrl
+  }
+
+  return journeyUrls[journey] || constants.urls.GOV_UK_SERVICE_HOME
 }
 
 const getJourneyServiceName = journey => journeyServiceNames[journey]

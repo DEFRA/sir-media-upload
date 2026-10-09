@@ -38,7 +38,6 @@ export default {
     isCached: !config.isDev,
     context: request => {
       const journey = request.yar.id ? request.yar.get('journey') : null
-      const defaultServiceUrl = config.deploymentEnv ? config.smartIncidentReportingBaseUrl : constants.urls.GOV_UK_REPORT_ENVIRONMENTAL_PROBLEM
 
       return {
         appVersion: version,
@@ -47,9 +46,9 @@ export default {
         assetPath: `${config.appPathPrefix}/public`,
         appPathPrefix: config.appPathPrefix,
         govUkHome: constants.urls.GOV_UK_HOME,
-        serviceUrl: journey ? createJourneyUrl(journey) : defaultServiceUrl,
-        navServiceName: getJourneyServiceName(journey) || 'Report an environmental problem',
-        serviceName: 'Report an environmental problem',
+        serviceUrl: createJourneyUrl(journey),
+        navServiceName: getJourneyServiceName(journey) || constants.urls.GOV_UK_SERVICE_HOME,
+        serviceName: constants.urls.GOV_UK_SERVICE_HOME,
         pageTitleServiceName: 'report an environmental problem',
         smartIncidentReportingBaseUrl: config.smartIncidentReportingBaseUrl,
         feedbackUrl: `${config.smartIncidentReportingBaseUrl}/feedback`
