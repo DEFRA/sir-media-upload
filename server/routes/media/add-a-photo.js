@@ -6,22 +6,11 @@ import path from 'node:path'
 import dirname from '../../../dirname.cjs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
 import { fileMalwareCheck } from '../../services/file-malware-checker.js'
+import { queueImageCheckInBackground } from '../../services/image-check-background.js'
 import { extractImageMetadata } from '../../utils/image-metadata-helpers.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
-
-const MAX_IMAGE_RESIZE_DEPTH = 5
 const MAX_SELECTED_FILES = 5
-const MIN_RESIZE_WIDTH = 320
-const MAX_IMAGE_DIMENSION = 7200
-const QUALITY_LEVELS = [80, 70, 60, 50, 40, 30]
-const RESIZE_WIDTH_RATIO = 0.8
 const PAYLOAD_MAX_BYTES = 25 * 1024 * 1024 // 25MB
-const UPLOAD_MAX_BYTES = 4 * 1024 * 1024
-
-const isLessThanMaxBase64Size = (fileBuffer) => {
-  const base64Size = fileBuffer.toString('base64').length
-  return base64Size <= UPLOAD_MAX_BYTES
-}
 
 export function streamToBuffer (stream) {
   return new Promise((resolve, reject) => {
@@ -98,80 +87,6 @@ export async function convertImageType (fileBuffer, file) {
   }
 }
 
-export async function convertImageSize (fileBuffer, extension, depth = 0, metadata = null, exceedsMaxDimension = null) {
-  const imageMetadata = metadata || await sharp(fileBuffer).metadata()
-  const imageExceedsMaxDimension = exceedsMaxDimension ?? (
-    (imageMetadata.width && imageMetadata.width > MAX_IMAGE_DIMENSION) ||
-    (imageMetadata.height && imageMetadata.height > MAX_IMAGE_DIMENSION)
-  )
-
-  if (isLessThanMaxBase64Size(fileBuffer) && !imageExceedsMaxDimension) {
-    return { buffer: fileBuffer, extension }
-  }
-
-  if (depth >= MAX_IMAGE_RESIZE_DEPTH) {
-    const err = new Error('Image file is too large after processing')
-    err.code = 'FILE_TOO_LARGE'
-    throw err
-  }
-
-  if (imageExceedsMaxDimension) {
-    const scaledBuffer = await sharp(fileBuffer)
-      .resize({
-        width: MAX_IMAGE_DIMENSION,
-        height: MAX_IMAGE_DIMENSION,
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .toBuffer()
-
-    return convertImageSize(scaledBuffer, extension, depth + 1)
-  }
-
-  const tryJpegQuality = async (index) => {
-    if (index >= QUALITY_LEVELS.length) {
-      return null
-    }
-
-    const convertedBuffer = await sharp(fileBuffer)
-      .jpeg({ quality: QUALITY_LEVELS[index] })
-      .toBuffer()
-
-    if (isLessThanMaxBase64Size(convertedBuffer)) {
-      return { buffer: convertedBuffer, extension: '.jpg' }
-    }
-
-    return tryJpegQuality(index + 1)
-  }
-
-  const qualityResult = await tryJpegQuality(0)
-  if (qualityResult) {
-    return qualityResult
-  }
-
-  if (!imageMetadata.width || imageMetadata.width <= MIN_RESIZE_WIDTH) {
-    const fallbackBuffer = await sharp(fileBuffer).jpeg({ quality: 30 }).toBuffer()
-
-    if (!isLessThanMaxBase64Size(fallbackBuffer)) {
-      const err = new Error('Image file is too large after processing')
-      err.code = 'FILE_TOO_LARGE'
-      throw err
-    }
-
-    return { buffer: fallbackBuffer, extension: '.jpg' }
-  }
-
-  const resizedBuffer = await sharp(fileBuffer)
-    .resize({
-      width: Math.max(MIN_RESIZE_WIDTH, Math.floor(imageMetadata.width * RESIZE_WIDTH_RATIO)),
-      withoutEnlargement: true
-    })
-    .jpeg({ quality: 30 })
-    .toBuffer()
-
-  return convertImageSize(resizedBuffer, '.jpg', depth + 1)
-}
-
 async function handleFileUpload (request, uploadId) {
   // 1. Check file exists
   const file = request.payload.fileUpload1
@@ -223,15 +138,7 @@ async function handleFileUpload (request, uploadId) {
   // 3. Convert image type
   const { buffer: convertedBuffer, extension } = await convertImageType(fileBuffer, file)
 
-  // 4. Check 4MB size or max dimensions and store in session if needed
-  const metadata = await sharp(convertedBuffer).metadata()
-  const exceedsMaxDimension = (metadata.width && metadata.width > MAX_IMAGE_DIMENSION) ||
-    (metadata.height && metadata.height > MAX_IMAGE_DIMENSION)
-  const aiCheckerImage = (!isLessThanMaxBase64Size(convertedBuffer) || exceedsMaxDimension)
-    ? (await convertImageSize(convertedBuffer, extension, 0, metadata, exceedsMaxDimension)).buffer.toString('base64')
-    : null
-
-  // 5. Create thumbnail from converted image
+  // 4. Create thumbnail from converted image
   const thumbnail = await sharp(convertedBuffer)
     .resize({ width: 200 })
     .toBuffer()
@@ -247,7 +154,7 @@ async function handleFileUpload (request, uploadId) {
   const finalFilename = findUniqueName(`quarantine/${uploadId}/${originalName}${extension}`)
   const thumbnailBlobPath = `${finalFilename.slice(0, finalFilename.length - extension.length)}-thumbnail${extension}`
 
-  // 6. Upload converted image and thumbnail to same container/folder
+  // 5. Upload converted image and thumbnail to same container/folder
   await containerClient
     .getBlockBlobClient(finalFilename)
     .uploadData(convertedBuffer)
@@ -268,7 +175,6 @@ async function handleFileUpload (request, uploadId) {
   return {
     finalFilename,
     fileSizeBytes: convertedBuffer.length,
-    aiCheckerImage,
     thumbnailBlobPath,
     localFilename: `${uploadId}/${thumbnailName}`,
     localThumbnailDir: thumbDir,
@@ -312,9 +218,27 @@ const handlers = {
     }
 
     try {
-      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localFilename, localThumbnailDir, dateTaken, geotag } = await handleFileUpload(request, uploadId)
-      const thumbLoc = `/public/thumbnails/${localFilename}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, localThumbnailDir, dateTaken, geotag })
+      const { finalFilename, fileSizeBytes, thumbnailBlobPath, localFilename, localThumbnailDir, dateTaken, geotag } = await handleFileUpload(request, uploadId)
+      const newImage = {
+        finalFilename,
+        thumbLoc: `/public/thumbnails/${localFilename}`,
+        thumbnailBlobPath,
+        fileSizeBytes,
+        localThumbnailDir,
+        dateTaken,
+        geotag
+      }
+
+      addThumbnailBySirId(request, newImage)
+      queueImageCheckInBackground(request.server, sirid, [newImage], request.logger)
+        .catch((error) => {
+          request.logger?.error?.({
+            message: 'Failed to queue background image check',
+            sirid,
+            finalFilename: newImage.finalFilename,
+            error: error?.message || error
+          })
+        })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 
@@ -332,13 +256,6 @@ const handlers = {
           return h.view(constants.views.ADD_A_PHOTO, {
             maxSelectedFiles: false,
             errorMessage: 'Select a file in a different image format, for example JPEG or PNG',
-            backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
-          })
-
-        case 'FILE_TOO_LARGE':
-          return h.view(constants.views.ADD_A_PHOTO, {
-            maxSelectedFiles: false,
-            errorMessage: 'The selected file must be smaller than 4MB',
             backLinkHref: `${constants.routes.YOUR_PHOTOS}?sirid=${sirid}`
           })
 

@@ -6,6 +6,7 @@ import {
   getSessionDetailsBySirId,
   getThumbnailsBySirId,
   addThumbnailBySirId,
+  updateThumbnailBySirId,
   removeThumbnailFromSession,
   clearSessionDetailsBySirId,
   getSirIdFromRequest,
@@ -174,6 +175,49 @@ describe('upload-session-helpers', () => {
       const thumbnail = { finalFilename: 'new.jpg' }
       const result = addThumbnailBySirId(mockRequest, thumbnail, null)
       expect(result).toEqual([])
+    })
+  })
+
+  describe('updateThumbnailBySirId', () => {
+    it('updates and returns matching thumbnail by finalFilename', () => {
+      mockRequest.yar.set('existing-uploads', {
+        'test-session-id': {
+          thumbnails: [{ finalFilename: 'photo1.jpg', aiResizeFailed: false }]
+        }
+      })
+
+      const result = updateThumbnailBySirId(mockRequest, 'photo1.jpg', { aiResizeFailed: true })
+
+      expect(result).toEqual({ finalFilename: 'photo1.jpg', aiResizeFailed: true })
+      expect(getThumbnailsBySirId(mockRequest)[0].aiResizeFailed).toBe(true)
+    })
+
+    it('returns null when sirid is missing', () => {
+      const result = updateThumbnailBySirId(mockRequest, 'photo1.jpg', {}, null)
+      expect(result).toBeNull()
+    })
+
+    it('returns null when finalFilename is missing', () => {
+      const result = updateThumbnailBySirId(mockRequest, '', { aiResizeFailed: true })
+      expect(result).toBeNull()
+    })
+
+    it('returns null when thumbnails is not an array', () => {
+      mockRequest.yar.set('existing-uploads', {
+        'test-session-id': { thumbnails: null }
+      })
+
+      const result = updateThumbnailBySirId(mockRequest, 'photo1.jpg', { aiResizeFailed: true })
+      expect(result).toBeNull()
+    })
+
+    it('returns null when target thumbnail is not found', () => {
+      mockRequest.yar.set('existing-uploads', {
+        'test-session-id': { thumbnails: [{ finalFilename: 'other.jpg' }] }
+      })
+
+      const result = updateThumbnailBySirId(mockRequest, 'photo1.jpg', { aiResizeFailed: true })
+      expect(result).toBeNull()
     })
   })
 
