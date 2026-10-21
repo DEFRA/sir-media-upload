@@ -221,15 +221,16 @@ async function handleFileUpload (request, uploadId) {
   await scanBlobClient.deleteIfExists()
 
   // 3. Convert image type
-  const { buffer: convertedBuffer, extension } = await convertImageType(fileBuffer, file)
+  const convertedImage = await convertImageType(fileBuffer, file)
 
-  // 4. Check 4MB size or max dimensions and store in session if needed
-  const metadata = await sharp(convertedBuffer).metadata()
+  // 4. Resize images that exceed the AI checker limits before storing them
+  const metadata = await sharp(convertedImage.buffer).metadata()
   const exceedsMaxDimension = (metadata.width && metadata.width > MAX_IMAGE_DIMENSION) ||
     (metadata.height && metadata.height > MAX_IMAGE_DIMENSION)
-  const aiCheckerImage = (!isLessThanMaxBase64Size(convertedBuffer) || exceedsMaxDimension)
-    ? (await convertImageSize(convertedBuffer, extension, 0, metadata, exceedsMaxDimension)).buffer.toString('base64')
-    : null
+  const imageForStorage = !isLessThanMaxBase64Size(convertedImage.buffer) || exceedsMaxDimension
+    ? await convertImageSize(convertedImage.buffer, convertedImage.extension, 0, metadata, exceedsMaxDimension)
+    : convertedImage
+  const { buffer: convertedBuffer, extension } = imageForStorage
 
   // 5. Create thumbnail from converted image
   const thumbnail = await sharp(convertedBuffer)
@@ -268,7 +269,6 @@ async function handleFileUpload (request, uploadId) {
   return {
     finalFilename,
     fileSizeBytes: convertedBuffer.length,
-    aiCheckerImage,
     thumbnailBlobPath,
     localFilename: `${uploadId}/${thumbnailName}`,
     localThumbnailDir: thumbDir,
@@ -312,9 +312,9 @@ const handlers = {
     }
 
     try {
-      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localFilename, localThumbnailDir, dateTaken, geotag } = await handleFileUpload(request, uploadId)
+      const { finalFilename, fileSizeBytes, thumbnailBlobPath, localFilename, localThumbnailDir, dateTaken, geotag } = await handleFileUpload(request, uploadId)
       const thumbLoc = `/public/thumbnails/${localFilename}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, localThumbnailDir, dateTaken, geotag })
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, localThumbnailDir, dateTaken, geotag })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 

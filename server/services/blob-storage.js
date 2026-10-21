@@ -1,8 +1,9 @@
 import { DefaultAzureCredential } from '@azure/identity'
-import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob'
+import { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential } from '@azure/storage-blob'
 import config from '../utils/config.js'
 
 const uploadContainerName = 'sir-media-uploads'
+const aiCheckerSasDurationMs = 10 * 60 * 1000
 
 const getBlobServiceClient = async () => {
   if (getBlobServiceClient.cachedClient) {
@@ -45,6 +46,26 @@ const getUploadContainerClient = async () => {
   return containerClient
 }
 
+const getAIImageBlobUrl = (blobClient) => {
+  if (!config.storageAccessKey) {
+    throw new Error('AZURE_STORAGE_ACCESS_KEY is required to generate an AI image blob URL')
+  }
+
+  const startsOn = new Date(Date.now() - 60 * 1000)
+  const expiresOn = new Date(Date.now() + aiCheckerSasDurationMs)
+  const credential = new StorageSharedKeyCredential(config.storageAccount, config.storageAccessKey)
+  const sasToken = generateBlobSASQueryParameters({
+    containerName: blobClient.containerName,
+    blobName: blobClient.name,
+    permissions: BlobSASPermissions.parse('r'),
+    startsOn,
+    expiresOn,
+    protocol: 'https'
+  }, credential).toString()
+
+  return `${blobClient.url}?${sasToken}`
+}
+
 const moveBlobToFolder = async (containerClient, sourcePath, destFolder) => {
   const pathParts = sourcePath.split('/')
   pathParts[0] = destFolder
@@ -67,5 +88,6 @@ const moveBlobToFolder = async (containerClient, sourcePath, destFolder) => {
 export {
   getBlobServiceClient,
   getUploadContainerClient,
+  getAIImageBlobUrl,
   moveBlobToFolder
 }

@@ -1,7 +1,8 @@
 import { DefaultAzureCredential } from '@azure/identity'
-import { BlobServiceClient, StorageSharedKeyCredential } from '@azure/storage-blob'
+import { BlobServiceClient, BlobSASPermissions, generateBlobSASQueryParameters, StorageSharedKeyCredential } from '@azure/storage-blob'
 import config from '../../utils/config.js'
 import {
+  getAIImageBlobUrl,
   getBlobServiceClient,
   getUploadContainerClient,
   moveBlobToFolder
@@ -13,6 +14,8 @@ jest.mock('@azure/identity', () => ({
 
 jest.mock('@azure/storage-blob', () => ({
   BlobServiceClient: jest.fn(),
+  BlobSASPermissions: { parse: jest.fn() },
+  generateBlobSASQueryParameters: jest.fn(),
   StorageSharedKeyCredential: jest.fn()
 }))
 
@@ -45,7 +48,9 @@ describe('blob-storage', () => {
     delete getBlobServiceClient.cachedClient
     delete getUploadContainerClient.cachedClient
     jest.clearAllMocks()
-    config.storageAccessKey = undefined
+    config.storageAccessKey = 'test-key'
+    BlobSASPermissions.parse.mockReturnValue('read-permission')
+    generateBlobSASQueryParameters.mockReturnValue({ toString: () => 'sv=test&sp=r' })
   })
 
   describe('getBlobServiceClient', () => {
@@ -67,6 +72,7 @@ describe('blob-storage', () => {
     describe('when no storage access key is configured', () => {
       it('should use DefaultAzureCredential', async () => {
         setupMocks()
+        config.storageAccessKey = undefined
 
         await getUploadContainerClient()
 
@@ -248,6 +254,44 @@ describe('blob-storage', () => {
         expect(result).toBe('processed/photo%2523.jpg')
         expect(containerClient.getBlockBlobClient).toHaveBeenCalledWith('processed/photo%2523.jpg')
       })
+    })
+  })
+
+  describe('getAIImageBlobUrl', () => {
+    it('creates a short-lived HTTPS read SAS URL for a single blob', () => {
+      const blobClient = {
+        containerName: 'sir-media-uploads',
+        name: 'quarantine/session/photo.jpg',
+        url: 'https://storage-account.blob.core.windows.net/sir-media-uploads/quarantine/session/photo.jpg'
+      }
+      const before = Date.now()
+
+      const result = getAIImageBlobUrl(blobClient)
+      const after = Date.now()
+
+      expect(result).toBe(`${blobClient.url}?sv=test&sp=r`)
+      expect(BlobSASPermissions.parse).toHaveBeenCalledWith('r')
+      expect(generateBlobSASQueryParameters).toHaveBeenCalledWith(
+        expect.objectContaining({
+          containerName: blobClient.containerName,
+          blobName: blobClient.name,
+          permissions: 'read-permission',
+          protocol: 'https'
+        }),
+        expect.anything()
+      )
+
+      const sasOptions = generateBlobSASQueryParameters.mock.calls[0][0]
+      expect(sasOptions.startsOn.getTime()).toBeGreaterThanOrEqual(before - 60 * 1000)
+      expect(sasOptions.startsOn.getTime()).toBeLessThanOrEqual(after - 60 * 1000)
+      expect(sasOptions.expiresOn.getTime()).toBeGreaterThanOrEqual(before + 10 * 60 * 1000)
+      expect(sasOptions.expiresOn.getTime()).toBeLessThanOrEqual(after + 10 * 60 * 1000)
+    })
+
+    it('requires a storage access key to generate a SAS URL', () => {
+      config.storageAccessKey = undefined
+
+      expect(() => getAIImageBlobUrl({})).toThrow('AZURE_STORAGE_ACCESS_KEY is required')
     })
   })
 })

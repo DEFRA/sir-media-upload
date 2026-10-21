@@ -4,7 +4,8 @@ import wreck from '@hapi/wreck'
 import config from '../../utils/config.js'
 
 jest.mock('../blob-storage.js', () => ({
-  getUploadContainerClient: jest.fn()
+  getUploadContainerClient: jest.fn(),
+  getAIImageBlobUrl: jest.fn()
 }))
 
 jest.mock('@hapi/wreck', () => ({
@@ -14,9 +15,9 @@ jest.mock('@hapi/wreck', () => ({
   }
 }))
 
-const createContainer = (buffer = Buffer.from('image-data')) => ({
+const createContainer = () => ({
   getBlobClient: jest.fn().mockReturnValue({
-    downloadToBuffer: jest.fn().mockResolvedValue(buffer)
+    url: 'https://storage-account/sir-media-uploads/a.jpg'
   })
 })
 
@@ -36,6 +37,7 @@ describe('image-checker', () => {
     config.apimAISecret = 'client-secret'
     config.apimAITenantId = 'tenant-id'
     config.apimAIEndpoint = 'example-apim.contoso.net'
+    blobStorage.getAIImageBlobUrl.mockReturnValue('https://storage-account/sir-media-uploads/a.jpg?sv=test&sp=r')
   })
 
   it('returns skipped when thumbnails are empty', async () => {
@@ -64,27 +66,20 @@ describe('image-checker', () => {
     expect(wreck.post).toHaveBeenCalledTimes(2)
   })
 
-  it('fetches blob content when aiCheckerImage is absent', async () => {
+  it('sends the blob URL to the AI checker', async () => {
     const container = createContainer()
     mockTokenCall()
     mockImageAnalyzeCall([])
     blobStorage.getUploadContainerClient.mockResolvedValue(container)
     await imageChecker.validate([{ finalFilename: 'a.jpg' }])
     expect(container.getBlobClient).toHaveBeenCalledWith('a.jpg')
-  })
-
-  it('uses aiCheckerImage when present', async () => {
-    const container = createContainer()
-    mockTokenCall()
-    mockImageAnalyzeCall([])
-    blobStorage.getUploadContainerClient.mockResolvedValue(container)
-    const aiCheckerImage = Buffer.from('ai-ready').toString('base64')
-    await imageChecker.validate([{ finalFilename: 'a.jpg', aiCheckerImage }])
-    expect(container.getBlobClient).not.toHaveBeenCalled()
 
     const imageAnalyzeCallArgs = wreck.post.mock.calls[1]
     const payload = JSON.parse(imageAnalyzeCallArgs[1].payload)
-    expect(payload.image.content).toBe(aiCheckerImage)
+    expect(blobStorage.getAIImageBlobUrl).toHaveBeenCalledWith({
+      url: 'https://storage-account/sir-media-uploads/a.jpg'
+    })
+    expect(payload.image).toEqual({ blobUrl: 'https://storage-account/sir-media-uploads/a.jpg?sv=test&sp=r' })
   })
 
   it('returns severityScores with all categories at 0 when nothing detected', async () => {
