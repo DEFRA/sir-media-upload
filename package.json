@@ -4,6 +4,9 @@
   "description": "Smart Incident Reporting media upload service",
   "main": "app/index.js",
   "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "start": "node index.js",
     "build:css": "./bin/build-css.sh",

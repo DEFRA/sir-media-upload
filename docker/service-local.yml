@@ -1,4 +1,4 @@
-version: "3.9"
+name: sir-media-uploader
 secrets:
   WEBAPP_ENV:
     file: ./secrets/WEBAPP_ENV
@@ -14,4 +14,6 @@ services:
       - "8000:8000"
     secrets:
       - WEBAPP_ENV
-    entrypoint: [ '/bin/sh', '-c', "source /run/secrets/WEBAPP_ENV && npm run start" ]
+    entrypoint: [ '/bin/sh', '-c' ]
+    command:
+      "source /run/secrets/WEBAPP_ENV && export NODE_ENV=development && npm run dev"
