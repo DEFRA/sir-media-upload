@@ -1,9 +1,9 @@
-version: '3.3'
+name: sir-media-uploader
 
 services:
   redis:
     image: redis:latest
-    container_name: redis
+
     restart: always
     ports:
       - "6379:6379"
