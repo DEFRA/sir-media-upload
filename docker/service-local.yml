@@ -1,4 +1,4 @@
-name: sir-media-uploader
+name: sir-media-uploader-local
 secrets:
   WEBAPP_ENV:
     file: ./secrets/WEBAPP_ENV
