@@ -1,7 +1,8 @@
-version: "3.9"
+name: sir-media-uploader
 services:
   webapp:
     image: sir-media-upload:${TAG:-latest}
+    container_name: sir-media-uploader-webapp
     build:
       context: ../
       dockerfile: dockerfile
@@ -11,4 +12,3 @@ services:
       - "8000:8000"
     environment:
       - REDIS_HOST=redis
-      - REDIS_PORT=6379

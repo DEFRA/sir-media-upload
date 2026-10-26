@@ -140,3 +140,4 @@ vite.config.ts.timestamp-*
 
 # Project specific ignores
 server/public
+/docker/secrets
