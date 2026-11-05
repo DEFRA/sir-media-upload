@@ -3,12 +3,13 @@ import path from 'path'
 import imageChecker from '../../services/image-checker.js'
 import { getUploadContainerClient, moveBlobToFolder } from '../../services/blob-storage.js'
 import { sendMessage } from '../../services/service-bus.js'
+import { waitForValidation } from '../../services/image-check-background.js'
 import { hasValidSirId, getThumbnailsBySirId, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
 
 const harmfulContent = 'quarantine/harmful-content'
 
 const getFolderByAIResult = (validationResult, imageIndex) => {
-  if (validationResult.skipped || !validationResult.response) return 'cleared'
+  if (validationResult?.skipped || !validationResult?.response) return harmfulContent
 
   const imageResult = validationResult.response[imageIndex]
   if (!imageResult) {
@@ -80,7 +81,7 @@ const handlers = {
     const { sirid } = request.query
     const images = getThumbnailsBySirId(request)
     const uploadContainerClient = await getUploadContainerClient()
-    const validationResult = await imageChecker.validate(images)
+    const { validationResult } = await waitForValidation(request.server, sirid, images)
 
     const movedImages = await Promise.all(
       images.map(async (image, index) => {
@@ -101,7 +102,6 @@ const handlers = {
     )
 
     const payload = buildPayload(sirid, movedImages, validationResult, uploadContainerClient.url)
-    console.log('Payload to send to service bus', JSON.stringify(payload, null, 2))
     await sendMessage(request.logger, payload)
     const redirectUrl = `${constants.routes.SUCCESS}?sirid=${sirid}`
     return h.redirect(redirectUrl)

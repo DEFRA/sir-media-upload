@@ -3,10 +3,15 @@ import { getServer } from '../../../.jest/setup.js'
 import constants from '../../utils/constants.js'
 import fs from 'node:fs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
+import { removeImageCheckStatusByFilename } from '../../services/image-check-background.js'
 import config from '../../utils/config.js'
 
 jest.mock('../../services/blob-storage.js', () => ({
   getUploadContainerClient: jest.fn()
+}))
+
+jest.mock('../../services/image-check-background.js', () => ({
+  removeImageCheckStatusByFilename: jest.fn()
 }))
 
 jest.mock('node:fs', () => ({
@@ -51,6 +56,7 @@ describe(baseUrl, () => {
     fs.unlinkSync.mockImplementation(() => {})
 
     getServer().app.mediaUploadCache.get = jest.fn().mockResolvedValue({ journey: 'test' })
+    removeImageCheckStatusByFilename.mockResolvedValue(undefined)
   })
 
   afterEach(() => {
