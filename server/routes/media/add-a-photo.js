@@ -6,6 +6,8 @@ import path from 'node:path'
 import dirname from '../../../dirname.cjs'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
 import { fileMalwareCheck } from '../../services/file-malware-checker.js'
+import foundryProject from '../../services/foundry-project.js'
+import config from '../../utils/config.js'
 import { extractImageMetadata } from '../../utils/image-metadata-helpers.js'
 import { addSirIdToQueryString, hasValidSirId, getThumbnailsBySirId, addThumbnailBySirId, getInvalidSirIdRedirectUrl } from '../../utils/upload-session-helpers.js'
 
@@ -230,6 +232,21 @@ async function handleFileUpload (request, uploadId) {
   const aiCheckerImage = (!isLessThanMaxBase64Size(convertedBuffer) || exceedsMaxDimension)
     ? (await convertImageSize(convertedBuffer, extension, 0, metadata, exceedsMaxDimension)).buffer.toString('base64')
     : null
+
+  if (config.azureAIProjectEndpoint) {
+    console.log('Checking Foundry access for uploaded photo; image analysis is not enabled', {
+      imageType: metadata.format,
+      imageSizeBytes: convertedBuffer.length
+    })
+    try {
+      await foundryProject.checkConnection()
+    } catch (error) {
+      console.error('Foundry project connection failed', {
+        errorMessage: error.message,
+        statusCode: error.output?.statusCode
+      })
+    }
+  }
 
   // 5. Create thumbnail from converted image
   const thumbnail = await sharp(convertedBuffer)
