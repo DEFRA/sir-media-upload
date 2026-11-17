@@ -126,6 +126,43 @@ describe(baseUrl, () => {
       expect(response.payload).toContain(`${config.appPathPrefix}/public/thumbnails/upload-id-1.jpg`)
     })
 
+    it('should display analysis details beneath a photo', async () => {
+      const thumbnails = [{
+        ...mockThumbnails[0],
+        aiVisionStatus: 'succeeded',
+        aiVisionAnalysis: {
+          caption: 'A river flowing through a green landscape',
+          tags: ['river', 'water'],
+          objects: ['river'],
+          rawResponse: '{"caption":"A river flowing through a green landscape"}'
+        }
+      }]
+
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
+        'existing-uploads': { 'test-session-id': { thumbnails } }
+      })
+
+      expect(response.payload).toContain('AI image analysis')
+      expect(response.payload).toContain('A river flowing through a green landscape')
+      expect(response.payload).toContain('river')
+      expect(response.payload).toContain('View raw response')
+    })
+
+    it('should display the analysis failure reason beneath a photo', async () => {
+      const thumbnails = [{
+        ...mockThumbnails[0],
+        aiVisionStatus: 'failed',
+        aiVisionError: 'Deployment returned 404'
+      }]
+
+      const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {
+        'existing-uploads': { 'test-session-id': { thumbnails } }
+      })
+
+      expect(response.payload).toContain('AI image analysis failed.')
+      expect(response.payload).toContain('Deployment returned 404')
+    })
+
     it('should show "Add a photo" link when no photos added', async () => {
       const response = await submitGetRequest({ url }, header, constants.statusCodes.OK, {})
       expect(response.payload).toContain('Add a photo')

@@ -32,6 +32,12 @@ const analyzeUploadedImage = async (imageBuffer, logger) => {
       aiVisionError: 'The Foundry project endpoint is not configured.'
     }
   }
+  if (!config.azureAIModelDeploymentName) {
+    return {
+      aiVisionStatus: 'failed',
+      aiVisionError: 'Set AZURE_AI_MODEL_DEPLOYMENT_NAME to an image-capable Foundry deployment.'
+    }
+  }
 
   try {
     const aiVisionAnalysis = await foundryProject.analyzeImage(imageBuffer)
