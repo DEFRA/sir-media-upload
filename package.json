@@ -28,6 +28,7 @@
   "license": "OGL-UK-3.0",
   "dependencies": {
     "@azure-rest/ai-content-safety": "^1.0.1",
+    "@azure/ai-projects": "^2.11.0",
     "@azure/core-auth": "^1.10.1",
     "@azure/identity": "^4.13.1",
     "@azure/service-bus": "^7.9.5",

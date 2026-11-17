@@ -1,80 +1,49 @@
-import wreck from '@hapi/wreck'
+import { AIProjectClient } from '@azure/ai-projects'
 import { DefaultAzureCredential } from '@azure/identity'
 import config from '../utils/config.js'
 
 const credential = new DefaultAzureCredential()
-const CONNECTION_TIMEOUT_MS = 5000
-const TOKEN_SCOPE = 'https://ai.azure.com/.default'
+const projectClients = new Map()
 
-const getAccessToken = async () => {
-  const controller = new AbortController()
-  let tokenTimeout
-  let accessToken
-  try {
-    accessToken = await Promise.race([
-      credential.getToken(TOKEN_SCOPE, { abortSignal: controller.signal }),
-      new Promise((resolve, reject) => {
-        tokenTimeout = setTimeout(() => {
-          controller.abort()
-          reject(new Error('Foundry access token request timed out after 5 seconds'))
-        }, CONNECTION_TIMEOUT_MS)
-      })
-    ])
-  } finally {
-    clearTimeout(tokenTimeout)
+const getProjectClient = () => {
+  const endpoint = config.azureAIProjectEndpoint
+  if (!endpoint) {
+    throw new Error('The Foundry project endpoint is not configured.')
   }
-  if (!accessToken?.token) {
-    throw new Error('No access token returned for Foundry project connection')
+
+  if (!projectClients.has(endpoint)) {
+    projectClients.set(endpoint, new AIProjectClient(endpoint, credential))
   }
-  return accessToken.token
+
+  return projectClients.get(endpoint)
 }
-
-const getResponseText = response => (response.output ?? [])
-  .filter(item => item.type === 'message')
-  .flatMap(item => item.content ?? [])
-  .filter(content => content.type === 'output_text')
-  .map(content => content.text)
-  .join('')
 
 const analyzeImage = async imageBuffer => {
   if (!config.azureAIModelDeploymentName) {
     throw new Error('Set AZURE_AI_MODEL_DEPLOYMENT_NAME to an image-capable Foundry deployment.')
   }
 
-  const endpoint = new URL(
-    'openai/v1/responses',
-    `${config.azureAIProjectEndpoint.replace(/\/+$/, '')}/`
-  )
-  const accessToken = await getAccessToken()
   const imageType = imageBuffer[0] === 0xff && imageBuffer[1] === 0xd8 ? 'image/jpeg' : 'image/png'
-
-  const response = await wreck.post(endpoint.toString(), {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    payload: JSON.stringify({
-      model: config.azureAIModelDeploymentName,
-      input: [{
-        role: 'user',
-        content: [
-          {
-            type: 'input_text',
-            text: 'Describe the visible contents of this image. Return JSON with caption (string), tags (array of strings), and objects (array of strings). Do not include confidence scores.'
-          },
-          {
-            type: 'input_image',
-            image_url: `data:${imageType};base64,${imageBuffer.toString('base64')}`
-          }
-        ]
-      }],
-      text: { format: { type: 'json_object' } },
-      store: false
-    }),
-    json: true
+  const response = await getProjectClient().getOpenAIClient().responses.create({
+    model: config.azureAIModelDeploymentName,
+    input: [{
+      role: 'user',
+      content: [
+        {
+          type: 'input_text',
+          text: 'Describe the visible contents of this image. Return JSON with caption (string), tags (array of strings), and objects (array of strings). Do not include confidence scores.'
+        },
+        {
+          type: 'input_image',
+          image_url: `data:${imageType};base64,${imageBuffer.toString('base64')}`
+        }
+      ]
+    }],
+    text: { format: { type: 'json_object' } },
+    store: false
   })
 
-  const rawResponse = getResponseText(response.payload)
+  const rawResponse = response.output_text
   if (!rawResponse) {
     throw new Error('No text was returned by the Foundry model.')
   }
@@ -93,35 +62,11 @@ const analyzeImage = async imageBuffer => {
 }
 
 const checkConnection = async () => {
-  const endpoint = new URL(
-    'deployments',
-    `${config.azureAIProjectEndpoint.replace(/\/+$/, '')}/`
-  )
-  endpoint.searchParams.set('api-version', 'v1')
-
-  console.log('Checking Foundry project connection', { endpoint: endpoint.toString() })
-  console.log('Requesting Foundry access token')
-  const accessToken = await getAccessToken()
-
-  console.log('Foundry access token acquired; requesting project deployments')
-  const response = await wreck.get(endpoint.toString(), {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: 'application/json'
-    },
-    json: true,
-    timeout: CONNECTION_TIMEOUT_MS
-  })
-
-  if (!Array.isArray(response.payload?.value)) {
-    throw new Error('Unexpected response from Foundry project deployments API')
+  const deployments = []
+  for await (const deployment of getProjectClient().deployments.list()) {
+    deployments.push(deployment)
   }
-
-  console.log('Foundry project connection succeeded', {
-    deployments: response.payload.value,
-    hasMoreDeployments: Boolean(response.payload.nextLink)
-  })
-  return response.payload
+  return deployments
 }
 
 export default { checkConnection, analyzeImage }
