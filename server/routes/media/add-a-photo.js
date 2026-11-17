@@ -25,6 +25,27 @@ const isLessThanMaxBase64Size = (fileBuffer) => {
   return base64Size <= UPLOAD_MAX_BYTES
 }
 
+const analyzeUploadedImage = async (imageBuffer, logger) => {
+  if (!config.azureAIProjectEndpoint) {
+    return {
+      aiVisionStatus: 'not_configured',
+      aiVisionError: 'The Foundry project endpoint is not configured.'
+    }
+  }
+
+  try {
+    const aiVisionAnalysis = await foundryProject.analyzeImage(imageBuffer)
+    return { aiVisionStatus: 'succeeded', aiVisionAnalysis }
+  } catch (error) {
+    const reason = error.output?.payload?.error?.message || error.message || 'Unknown analysis error'
+    logger.error({ err: error }, 'Foundry image analysis failed')
+    return {
+      aiVisionStatus: 'failed',
+      aiVisionError: String(reason).slice(0, 500)
+    }
+  }
+}
+
 export function streamToBuffer (stream) {
   return new Promise((resolve, reject) => {
     const chunks = []
@@ -233,20 +254,8 @@ async function handleFileUpload (request, uploadId) {
     ? (await convertImageSize(convertedBuffer, extension, 0, metadata, exceedsMaxDimension)).buffer.toString('base64')
     : null
 
-  if (config.azureAIProjectEndpoint) {
-    console.log('Checking Foundry access for uploaded photo; image analysis is not enabled', {
-      imageType: metadata.format,
-      imageSizeBytes: convertedBuffer.length
-    })
-    try {
-      await foundryProject.checkConnection()
-    } catch (error) {
-      console.error('Foundry project connection failed', {
-        errorMessage: error.message,
-        statusCode: error.output?.statusCode
-      })
-    }
-  }
+  const imageForAnalysis = aiCheckerImage ? Buffer.from(aiCheckerImage, 'base64') : convertedBuffer
+  const aiVisionResult = await analyzeUploadedImage(imageForAnalysis, request.logger)
 
   // 5. Create thumbnail from converted image
   const thumbnail = await sharp(convertedBuffer)
@@ -290,7 +299,8 @@ async function handleFileUpload (request, uploadId) {
     localFilename: `${uploadId}/${thumbnailName}`,
     localThumbnailDir: thumbDir,
     dateTaken,
-    geotag
+    geotag,
+    ...aiVisionResult
   }
 }
 
@@ -329,9 +339,9 @@ const handlers = {
     }
 
     try {
-      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localFilename, localThumbnailDir, dateTaken, geotag } = await handleFileUpload(request, uploadId)
+      const { finalFilename, fileSizeBytes, aiCheckerImage, thumbnailBlobPath, localFilename, localThumbnailDir, dateTaken, geotag, aiVisionStatus, aiVisionAnalysis, aiVisionError } = await handleFileUpload(request, uploadId)
       const thumbLoc = `/public/thumbnails/${localFilename}`
-      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, localThumbnailDir, dateTaken, geotag })
+      addThumbnailBySirId(request, { finalFilename, thumbLoc, thumbnailBlobPath, fileSizeBytes, aiCheckerImage, localThumbnailDir, dateTaken, geotag, aiVisionStatus, aiVisionAnalysis, aiVisionError })
 
       const redirectUrl = addSirIdToQueryString(request, constants.routes.YOUR_PHOTOS)
 

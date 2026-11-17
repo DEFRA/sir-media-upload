@@ -21,6 +21,7 @@ const handlers = {
       thumbnails: thumbnails.map((files, index) => ({
         ...files,
         filename: files.finalFilename.split('/').pop(),
+        aiVisionRaw: files.aiVisionAnalysis?.rawResponse,
         index
       })),
       remainingPhotos,

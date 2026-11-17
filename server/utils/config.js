@@ -51,6 +51,7 @@ const schema = Joi.object().keys({
   apimAITenantId: Joi.string().required(),
   apimAIEndpoint: Joi.string().required(),
   azureAIProjectEndpoint: Joi.string().uri({ scheme: ['https'] }).optional(),
+  azureAIModelDeploymentName: Joi.string().optional(),
   sirIdTesting: Joi.string().optional(),
   appPathPrefix: Joi.string().default('/media')
 })
@@ -80,6 +81,7 @@ const config = {
   apimAITenantId: process.env.APIM_AI_TENANT_ID,
   apimAIEndpoint: process.env.APIM_AI_ENDPOINT,
   azureAIProjectEndpoint: 'https://defra-foundry-dev.services.ai.azure.com/api/projects/DEVFAISIRPRJ1401',
+  azureAIModelDeploymentName: process.env.AZURE_AI_MODEL_DEPLOYMENT_NAME,
   sirIdTesting: process.env.SIR_ID_TESTING,
   appPathPrefix: process.env.APP_PATH_PREFIX
 }
