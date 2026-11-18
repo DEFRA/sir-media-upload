@@ -29,6 +29,39 @@
                 </dt>
                 <dd class="govuk-summary-list__value">
                     <img src="{{ appPathPrefix }}{{ photo.thumbLoc }}" alt="Uploaded thumbnail" style="width:100%;height:auto;">
+                    {% if photo.aiVisionStatus == 'succeeded' %}
+                        <div class="govuk-!-margin-top-4">
+                            <h3 class="govuk-heading-s">AI image analysis</h3>
+                            <h4 class="govuk-heading-s">Caption</h4>
+                            <p class="govuk-body">{{ photo.aiVisionAnalysis.caption or 'No caption returned.' }}</p>
+                            <h4 class="govuk-heading-s">Tags</h4>
+                            {% if photo.aiVisionAnalysis.tags.length %}
+                                <ul class="govuk-list govuk-list--bullet">
+                                    {% for tag in photo.aiVisionAnalysis.tags %}<li>{{ tag }}</li>{% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="govuk-body">No tags returned.</p>
+                            {% endif %}
+                            <h4 class="govuk-heading-s">Objects</h4>
+                            {% if photo.aiVisionAnalysis.objects.length %}
+                                <ul class="govuk-list govuk-list--bullet">
+                                    {% for object in photo.aiVisionAnalysis.objects %}<li>{{ object }}</li>{% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="govuk-body">No objects returned.</p>
+                            {% endif %}
+                            {% if photo.aiVisionRaw %}
+                                <details class="govuk-details">
+                                    <summary class="govuk-details__summary"><span class="govuk-details__summary-text">View raw response</span></summary>
+                                    <div class="govuk-details__text"><pre class="govuk-body">{{ photo.aiVisionRaw }}</pre></div>
+                                </details>
+                            {% endif %}
+                        </div>
+                    {% elif photo.aiVisionStatus == 'failed' %}
+                        <p class="govuk-body govuk-!-margin-top-4"><strong>AI image analysis failed.</strong> {{ photo.aiVisionError }}</p>
+                    {% elif photo.aiVisionStatus == 'not_configured' %}
+                        <p class="govuk-body govuk-!-margin-top-4">AI image analysis was not run: {{ photo.aiVisionError }}</p>
+                    {% endif %}
                 </dd>
                 <dd class="govuk-summary-list__actions vertical-align-top">
                     <form method="post" action="#" style="display:inline;">

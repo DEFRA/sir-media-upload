@@ -1,0 +1,62 @@
+2026-11-17T13:29:58.3847385Z
+{
+  "level": 50,
+  "time": 1794922198383,
+  "pid": 19,
+  "hostname": "f6982ec4f248",
+  "req": {
+    "id": "1794922163320:f6982ec4f248:19:mwknn4uq:10553",
+    "method": "post",
+    "url": "/media/add-a-photo",
+    "query": {
+      "sirid": "ed56a695-19f4-45ee-845a-242736ea90ff"
+    },
+    "headers": {
+      "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/jxl,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+      "host": "sir-uploader-tst1.azure.defra.cloud",
+      "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36",
+      "accept-encoding": "gzip, deflate, br, zstd",
+      "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+      "cache-control": "max-age=0",
+      "max-forwards": "10",
+      "origin": "https://sir-tst1.azure.defra.cloud",
+      "referer": "https://sir-tst1.azure.defra.cloud/media/add-a-photo?sirid=ed56a695-19f4-45ee-845a-242736ea90ff",
+      "x-forwarded-proto": "https",
+      "x-forwarded-port": "443",
+      "x-forwarded-for": "40.81.156.55:33750, 10.176.71.70",
+      "x-original-url": "/media/add-a-photo?sirid=ed56a695-19f4-45ee-845a-242736ea90ff",
+      "x-appgw-trace-id": "d71b8b9c1798c4a469781e2f09c806ff",
+      "x-original-host": "sir-tst1.azure.defra.cloud",
+      "sec-ch-ua": "\"Not-A.Brand\";v=\"99\", \"Google Chrome\";v=\"157\", \"Chromium\";v=\"157\"",
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": "\"macOS\"",
+      "sec-fetch-site": "same-origin",
+      "sec-fetch-mode": "navigate",
+      "sec-fetch-user": "?1",
+      "sec-fetch-dest": "document",
+      "priority": "u=0, i",
+      "x-arr-log-id": "dc24623a-2ec7-47e6-8534-b1b82e71a6e0",
+      "client-ip": "[fd40:234e:11b:9b0e:6b1b:1100:ab0:4746]:56266",
+      "disguised-host": "sir-uploader-tst1.azure.defra.cloud",
+      "x-site-deployment-id": "TSTSIRWEBAW1406",
+      "was-default-hostname": "tstsirwebaw1406.azurewebsites.net",
+      "x-appservice-proto": "https",
+      "x-arr-ssl": "2048|256|CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1, O=DigiCert Inc, C=US|CN=*.azure.defra.cloud, O=\"Department for Environment, Food & Rural Affairs\", L=LONDON, C=GB",
+      "x-forwarded-tlsversion": "1.2",
+      "x-waws-unencoded-url": "/media/add-a-photo?sirid=ed56a695-19f4-45ee-845a-242736ea90ff",
+      "x-client-ip": "10.176.71.70",
+      "x-client-port": "0",
+      "content-type": "multipart/form-data; boundary=----WebKitFormBoundaryhLIsmiD2zlha5giN",
+      "content-length": "26593"
+    },
+    "remoteAddress": "169.254.129.1",
+    "remotePort": 10771
+  },
+  "err": {
+    "type": "APIConnectionTimeoutError",
+    "message": "Request timed out.: fetch failed: Connect Timeout Error (attempted address: defra-foundry-dev.services.ai.azure.com:443, timeout: 10000ms)",
+    "stack": "Error: Request timed out.\n    at OpenAI.makeRequest (file:///home/node/node_modules/openai/client.mjs:923:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async Object.analyzeImage (file:///home/node/server/services/foundry-project.js:27:20)\n    at async analyzeUploadedImage (file:///home/node/server/routes/media/add-a-photo.js:43:30)\n    at async handleFileUpload (file:///home/node/server/routes/media/add-a-photo.js:264:26)\n    at async post (file:///home/node/server/routes/media/add-a-photo.js:348:185)\n    at async exports.Manager.execute (/home/node/node_modules/@hapi/hapi/lib/toolkit.js:60:28)\n    at async internals.handler (/home/node/node_modules/@hapi/hapi/lib/handler.js:46:20)\n    at async exports.execute (/home/node/node_modules/@hapi/hapi/lib/handler.js:31:20)\n    at async Request._lifecycle (/home/node/node_modules/@hapi/hapi/lib/request.js:370:32)\ncaused by: TypeError: fetch failed\ncaused by: ConnectTimeoutError: Connect Timeout Error (attempted address: defra-foundry-dev.services.ai.azure.com:443, timeout: 10000ms)\n    at onConnectTimeout (node:internal/deps/undici/undici:1992:23)\n    at Immediate._onImmediate (node:internal/deps/undici/undici:1973:11)\n    at process.processImmediate (node:internal/timers:574:21)\n    at process.callbackTrampoline (node:internal/async_hooks:131:17)"
+  },
+  "msg": "Foundry image analysis failed"
+}
+

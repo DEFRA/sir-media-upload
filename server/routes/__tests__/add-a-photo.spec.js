@@ -9,6 +9,7 @@ import sharp from 'sharp'
 import heicConvert from 'heic-convert'
 import * as addPhoto from '../media/add-a-photo.js'
 import { getUploadContainerClient } from '../../services/blob-storage.js'
+import foundryProject from '../../services/foundry-project.js'
 import config from '../../utils/config.js'
 
 jest.mock('../../services/blob-storage.js', () => ({
@@ -16,6 +17,13 @@ jest.mock('../../services/blob-storage.js', () => ({
 }))
 
 jest.mock('heic-convert', () => jest.fn())
+jest.mock('../../services/foundry-project.js', () => ({
+  __esModule: true,
+  default: {
+    checkConnection: jest.fn(),
+    analyzeImage: jest.fn()
+  }
+}))
 
 const mockValidPng = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO7+5e0AAAAASUVORK5CYII=',
@@ -56,7 +64,11 @@ const url = `${baseUrl}?sirid=test-session-id`
 const header = 'Add a photo'
 
 describe(baseUrl, () => {
+  const originalModelDeploymentName = config.azureAIModelDeploymentName
+
   beforeEach(() => {
+    config.azureAIModelDeploymentName = undefined
+    foundryProject.analyzeImage.mockReset()
     getUploadContainerClient.mockResolvedValue({
       getBlockBlobClient: () => ({
         uploadData: () => Promise.resolve(),
@@ -70,6 +82,7 @@ describe(baseUrl, () => {
   })
 
   afterEach(() => {
+    config.azureAIModelDeploymentName = originalModelDeploymentName
     jest.restoreAllMocks()
   })
 
@@ -705,6 +718,61 @@ describe(baseUrl, () => {
         const existingUploads = response.request.yar.get('existing-uploads')
         const thumbnails = existingUploads['test-session-id']?.thumbnails || []
         expect(thumbnails.length).toBeGreaterThan(0)
+      })
+
+      it('should store Foundry analysis with the uploaded photo', async () => {
+        const analysis = {
+          caption: 'A river flowing through a green landscape',
+          tags: ['river', 'water'],
+          objects: ['river'],
+          rawResponse: '{"caption":"A river flowing through a green landscape"}'
+        }
+        config.azureAIModelDeploymentName = 'test-vision-deployment'
+        foundryProject.analyzeImage.mockResolvedValue(analysis)
+        const form = createForm('valid.png', mockValidPng, 'image/png')
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+
+        const thumbnails = response.request.yar.get('existing-uploads')['test-session-id'].thumbnails
+        expect(foundryProject.analyzeImage).toHaveBeenCalledWith(mockValidPng)
+        expect(thumbnails[0].aiVisionStatus).toBe('succeeded')
+        expect(thumbnails[0].aiVisionAnalysis).toEqual(analysis)
+      })
+
+      it('should record a deployment configuration reason when analysis cannot run', async () => {
+        const form = createForm('valid.png', mockValidPng, 'image/png')
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+
+        const thumbnails = response.request.yar.get('existing-uploads')['test-session-id'].thumbnails
+        expect(thumbnails[0].aiVisionStatus).toBe('failed')
+        expect(thumbnails[0].aiVisionError).toContain('AZURE_AI_MODEL_DEPLOYMENT_NAME')
+        expect(foundryProject.analyzeImage).not.toHaveBeenCalled()
+      })
+
+      it('should record the Foundry failure reason without failing the upload', async () => {
+        config.azureAIModelDeploymentName = 'test-vision-deployment'
+        foundryProject.analyzeImage.mockRejectedValue(new Error('Deployment returned 404'))
+        const form = createForm('valid.png', mockValidPng, 'image/png')
+
+        const response = await submitPostRequest({
+          url,
+          payload: form.getBuffer(),
+          headers: form.getHeaders()
+        }, 302)
+
+        const thumbnails = response.request.yar.get('existing-uploads')['test-session-id'].thumbnails
+        expect(response.headers.location).toBe(`${constants.routes.YOUR_PHOTOS}?sirid=test-session-id`)
+        expect(thumbnails[0].aiVisionStatus).toBe('failed')
+        expect(thumbnails[0].aiVisionError).toBe('Deployment returned 404')
       })
 
       it('should store thumbLoc in session thumbnail entry', async () => {
