@@ -80,7 +80,8 @@ const config = {
   apimAISecret: process.env.APIM_AI_SECRET,
   apimAITenantId: process.env.APIM_AI_TENANT_ID,
   apimAIEndpoint: process.env.APIM_AI_ENDPOINT,
-  azureAIProjectEndpoint: 'https://defra-foundry-dev.services.ai.azure.com/api/projects/DEVFAISIRPRJ1401',
+  // azureAIProjectEndpoint: 'https://defra-foundry-dev.services.ai.azure.com/api/projects/DEVFAISIRPRJ1401',
+  azureAIProjectEndpoint: 'https://defra-foundry-tst.services.ai.azure.com/api/projects/TSTFAISIRPRJ1401',
   azureAIModelDeploymentName: 'gpt-4.1',
   sirIdTesting: process.env.SIR_ID_TESTING,
   appPathPrefix: process.env.APP_PATH_PREFIX
